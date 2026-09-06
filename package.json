@@ -1,0 +1,16 @@
+{
+  "name": "routine-manager-seu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SEU Law class routine and faculty schedule manager, backed by MongoDB and deployed on Vercel.",
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check api/storage.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.12.0"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

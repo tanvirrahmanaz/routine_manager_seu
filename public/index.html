@@ -1,0 +1,2712 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEU Law Routine Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2530;
+    --navy:#14532d;
+    --navy-2:#1e7d32;
+    --green:#1b5e20;
+    --green-dark:#0f3d18;
+    --cream:#f5f4f0;
+    --paper:#ffffff;
+    --line:#e2e0da;
+    --free-bg:#1b5e20;
+    --free-ink:#ffffff;
+    --busy-bg:#8b1a1a;
+    --busy-ink:#ffffff;
+    --date-bg:#e8b91f;
+    --date-ink:#3a2c02;
+    --muted:#767c85;
+    --radius:10px;
+    --shadow: 0 6px 20px rgba(20,83,45,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+
+  .masthead{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+    border-bottom:3px solid var(--navy);
+    padding-bottom:18px;margin-bottom:22px;
+  }
+  .masthead-left .eyebrow{
+    font-family:'Agency FB','Arial Narrow',sans-serif;
+    font-size:40px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--green); font-weight:700; margin-bottom:6px; line-height:1.1;
+  }
+  .masthead-left h1{
+    font-family:'Fraunces',serif;
+    font-size:30px; margin:0; color:var(--navy); font-weight:700;
+    line-height:1.25;
+  }
+  .masthead-left .sub{color:var(--muted); font-size:14.5px; margin-top:4px;}
+  .masthead-right{
+    text-align:right; font-size:13px; color:var(--muted); line-height:1.7;
+  }
+  .masthead-right b{color:var(--navy);}
+
+  .semester-bar{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    flex-wrap:wrap; margin-bottom:20px;
+  }
+  .semester-bar .semester-label{
+    font-weight:600; font-size:13.5px; color:var(--navy);
+  }
+  .semester-bar select{
+    font-family:inherit; font-size:14.5px; padding:8px 12px;
+    border:1.5px solid var(--navy-2); border-radius:8px; background:#fff;
+    color:var(--ink); cursor:pointer;
+  }
+  .semester-bar select:focus{outline:3px solid rgba(31,122,77,.35); outline-offset:1px;}
+  .semester-bar .btn{flex:none; padding:8px 20px;}
+
+  .control-bar{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:var(--paper); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px 20px; margin-bottom:20px;
+    box-shadow:var(--shadow);
+  }
+  .control-bar label{font-weight:600; font-size:14.5px; color:var(--navy);}
+  .date-field{display:flex; align-items:center; gap:10px;}
+  .date-display-wrap{position:relative; display:inline-block;}
+  .date-display-wrap input[type="date"]{
+    position:absolute; inset:0; width:100%; height:100%;
+    opacity:0; margin:0; padding:0; border:none; cursor:pointer; z-index:2;
+  }
+  .date-display{
+    padding:8px 14px; border:1.5px solid var(--navy-2); border-radius:8px;
+    background:#fff; font-family:inherit; font-size:14.5px; color:var(--ink);
+    min-width:190px; white-space:nowrap; pointer-events:none;
+  }
+  input[type="date"]{
+    font-family:inherit; font-size:15px; padding:9px 12px;
+    border:1.5px solid var(--navy-2); border-radius:8px; background:#fff;
+    color:var(--ink); cursor:pointer;
+  }
+  input[type="date"]:focus{outline:3px solid rgba(31,122,77,.35); outline-offset:1px;}
+  .day-chip{
+    background:var(--navy); color:#fff; padding:8px 16px; border-radius:999px;
+    font-weight:600; font-size:14.5px; letter-spacing:.02em;
+  }
+  .spacer{flex:1;}
+  .legend{display:flex; gap:14px; font-size:13px; color:var(--muted); flex-wrap:wrap;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:11px;height:11px;border-radius:3px; display:inline-block;}
+  .dot.free{background:var(--free-bg);}
+  .dot.busy{background:var(--busy-bg);}
+  .dot.date-only{background:var(--date-bg);}
+
+  .status-line{font-size:13px; color:var(--muted); margin:-6px 0 16px 2px; min-height:18px;}
+
+  /* Highlight the actual grid cell that is live right now */
+  .cell-busy.cell-live{
+    background:linear-gradient(160deg, #b71c1c 0%, #8b1a1a 100%) !important;
+    outline:2.5px solid #ffca28;
+    outline-offset:-2.5px;
+    box-shadow:0 0 0 3px rgba(255,202,40,.55), 0 0 16px 2px rgba(255,87,34,.55);
+    animation:liveCellGlow 1.3s ease-in-out infinite;
+    transform:scale(1.015);
+    z-index:1;
+  }
+  @keyframes liveCellGlow{
+    0%{box-shadow:0 0 0 3px rgba(255,202,40,.85), 0 0 20px 4px rgba(255,87,34,.75);}
+    50%{box-shadow:0 0 0 3px rgba(255,202,40,.25), 0 0 8px 1px rgba(255,87,34,.25);}
+    100%{box-shadow:0 0 0 3px rgba(255,202,40,.85), 0 0 20px 4px rgba(255,87,34,.75);}
+  }
+  .cell-live-badge{
+    position:absolute; top:3px; left:3px; right:3px;
+    background:#ffca28; color:#3a2c02;
+    font-size:9.5px; font-weight:800; letter-spacing:.06em; padding:2px 5px;
+    border-radius:5px; display:flex; align-items:center; justify-content:center; gap:4px; line-height:1.5;
+    box-shadow:0 1px 4px rgba(0,0,0,.35);
+  }
+  .cell-live-badge .live-cell-dot{
+    width:6px; height:6px; border-radius:50%; background:#c62828; display:inline-block;
+    animation:liveCellDotPulse 1s infinite;
+  }
+  @keyframes liveCellDotPulse{
+    0%{box-shadow:0 0 0 0 rgba(198,40,40,.8); opacity:1;}
+    70%{box-shadow:0 0 0 5px rgba(198,40,40,0); opacity:.6;}
+    100%{box-shadow:0 0 0 0 rgba(198,40,40,0); opacity:1;}
+  }
+  .cell-busy.cell-live .sec,
+  .cell-busy.cell-live .course,
+  .cell-busy.cell-live .teacher{
+    color:#fff !important; text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .cell-busy.cell-live .sec{margin-top:14px;}
+
+  table.grid{
+    width:100%; border-collapse:collapse; background:var(--paper);
+    border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);
+    border:1px solid var(--line);
+  }
+  table.grid th, table.grid td{
+    border:1px solid var(--line); padding:0; text-align:center;
+  }
+  table.grid thead th{
+    background:var(--navy); color:#fff; font-weight:600; font-size:14px;
+    padding:12px 8px; position:sticky; top:0;
+  }
+  table.grid thead th.time-col{background:var(--navy-2); min-width:118px; font-size:22px;}
+  table.grid thead th.room-group-col{
+    background:var(--navy-2); letter-spacing:.05em; font-size:12.5px; text-transform:uppercase;
+  }
+  table.grid tbody td.time-col{
+    background:var(--cream); font-weight:600; font-size:21px; color:var(--navy);
+    padding:10px 6px; white-space:nowrap;
+  }
+  table.grid tbody td.room-cell{min-width:132px; height:78px; vertical-align:middle; padding:6px;}
+  table.grid tbody tr:nth-child(odd) td.time-col{background:#ebe9e2;}
+
+  .cell-busy{
+    background:var(--busy-bg); border-radius:8px; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px; padding:6px 4px; position:relative;
+  }
+  .cell-busy .sec{font-weight:700; color:#ffffff; font-size:13.5px;}
+  .cell-busy .course{font-size:12px; color:#f3d9d9;}
+  .cell-busy .teacher{font-size:11.5px; color:#e3b9b9;}
+  .cell-actions{
+    position:absolute; top:4px; right:4px; display:flex; gap:4px;
+  }
+  .cell-actions button{
+    width:20px; height:20px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.3); color:#fff; font-size:11px; line-height:1;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .cell-actions button:hover{background:rgba(0,0,0,.5);}
+  .cell-busy-date{
+    background:var(--date-bg) !important;
+  }
+  .cell-busy-date .sec{color:var(--date-ink) !important;}
+  .cell-busy-date .course{color:#5a4a12 !important;}
+  .cell-busy-date .teacher{color:#7a6a2a !important;}
+  .cell-busy-date .cell-actions button{background:rgba(0,0,0,.18); color:var(--date-ink);}
+  .cell-busy-date .cell-actions button:hover{background:rgba(0,0,0,.32);}
+  .cell-label{
+    background:var(--busy-bg); border-radius:8px; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    color:#ffffff; font-size:13px; font-weight:600; position:relative;
+  }
+  .cell-label-date{
+    background:var(--date-bg) !important; color:var(--date-ink) !important;
+  }
+  .cell-label-date .cell-actions button{background:rgba(0,0,0,.18); color:var(--date-ink);}
+
+  .cell-free{height:100%;}
+  .add-btn{
+    width:100%; height:100%; min-height:66px; border:1.5px dashed rgba(255,255,255,.5); background:var(--free-bg);
+    color:#ffffff; font-weight:600; font-size:20px; border-radius:8px; cursor:pointer;
+    font-family:inherit; transition:background .12s;
+  }
+  .add-btn:hover{background:var(--green-dark);}
+  .add-btn .lbl{display:block; font-size:11.5px; font-weight:500; margin-top:1px;}
+
+  .grid-block{margin-bottom:24px;}
+  .grid-block:last-child{margin-bottom:0;}
+  .grid-heading{
+    font-family:'Fraunces',serif; font-weight:700; font-size:16.5px; color:var(--navy);
+    margin-bottom:8px; padding-left:2px;
+  }
+
+  .view-tabs{
+    display:flex; gap:28px; margin-bottom:18px;
+  }
+  .tab-btn{
+    font-family:inherit; font-size:16.5px; font-weight:600; padding:12px 26px;
+    border:1.5px solid var(--navy-2); background:var(--paper); color:var(--navy-2);
+    border-radius:999px; cursor:pointer; transition:background .12s, color .12s;
+  }
+  .tab-btn:hover{background:var(--cream);}
+  .tab-btn.active{background:var(--navy); border-color:var(--navy); color:#fff;}
+
+  .faculty-bar .date-field{flex-direction:column; align-items:flex-start; gap:6px;}
+  .faculty-bar label{font-weight:600; font-size:14.5px; color:var(--navy);}
+  .faculty-bar select{
+    font-family:inherit; font-size:15px; padding:10px 14px; min-width:220px;
+    border:1.5px solid var(--navy-2); border-radius:8px; background:#fff;
+    color:var(--ink); cursor:pointer;
+  }
+  .faculty-bar select:focus{outline:3px solid rgba(31,122,77,.35); outline-offset:1px;}
+
+  .result-heading{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    margin-bottom:12px; flex-wrap:wrap;
+  }
+  .result-heading h2{
+    font-family:'Fraunces',serif; font-size:18px; margin:0; color:var(--navy);
+  }
+  .count-pill{
+    font-size:12.5px; color:var(--muted); background:#fff; border:1px solid var(--line);
+    padding:4px 10px; border-radius:999px;
+  }
+  .class-list{display:flex; flex-direction:column; gap:10px;}
+  .class-card{
+    display:flex; align-items:center; gap:16px;
+    background:var(--paper); border:1px solid var(--line); border-left:5px solid var(--navy);
+    border-radius:10px; padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .class-card.origin-date{border-left-color:var(--date-bg);}
+  .class-card.origin-weekly{border-left-color:var(--navy-2);}
+  .class-card.is-live{
+    border-left-color:var(--navy); background:#eaf5ec;
+    box-shadow:0 0 0 2px var(--navy), var(--shadow);
+  }
+
+  .live-status{
+    display:flex; align-items:center; gap:9px; font-size:13.5px; font-weight:600;
+    padding:10px 16px; border-radius:10px; margin-bottom:14px;
+  }
+  .live-status-on{background:#eaf5ec; color:var(--green-dark); border:1px solid var(--navy);}
+  .live-status-off{background:var(--cream); color:var(--muted); border:1px solid var(--line); font-weight:500;}
+  .live-dot{
+    width:9px; height:9px; border-radius:50%; background:var(--muted); flex-shrink:0;
+  }
+  .live-status-on .live-dot{
+    background:var(--navy); animation:live-pulse 1.4s infinite;
+  }
+  @keyframes live-pulse{
+    0%{box-shadow:0 0 0 0 rgba(20,83,45,.55);}
+    70%{box-shadow:0 0 0 7px rgba(20,83,45,0);}
+    100%{box-shadow:0 0 0 0 rgba(20,83,45,0);}
+  }
+  .live-badge{
+    display:inline-block; background:var(--navy); color:#fff; font-size:10px; font-weight:700;
+    letter-spacing:.04em; padding:2px 7px; border-radius:999px; vertical-align:middle; margin-left:4px;
+  }
+  .class-card .time-block{
+    font-family:'Fraunces',serif; font-weight:700; font-size:16px; color:var(--navy);
+    min-width:120px; white-space:nowrap;
+  }
+  .class-card .details{flex:1; min-width:0;}
+  .class-card .course-line{font-weight:700; font-size:14.5px; color:var(--ink);}
+  .class-card .meta-line{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  .room-tag{
+    background:var(--navy); color:#fff; font-size:12px; font-weight:600;
+    padding:5px 10px; border-radius:8px; white-space:nowrap;
+  }
+  .week-summary{margin-bottom:14px; font-size:13px; color:var(--muted);}
+  .week-summary-item b{color:var(--navy); font-size:16px;}
+
+  .week-day-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
+    gap:14px;
+  }
+  .week-day-card{
+    background:var(--paper); border:1px solid var(--line); border-top:4px solid var(--navy);
+    border-radius:12px; padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .week-day-card.is-friday{border-top-color:var(--date-bg);}
+  .week-day-card.is-empty{border-top-color:var(--line); box-shadow:none;}
+  .week-day-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+    padding-bottom:8px; border-bottom:1px solid var(--line);
+  }
+  .week-day-name{font-family:'Fraunces',serif; font-weight:700; font-size:15.5px; color:var(--navy);}
+  .week-day-count{
+    background:var(--cream); color:var(--navy-2); font-size:11.5px; font-weight:700;
+    padding:2px 10px; border-radius:999px; min-width:20px; text-align:center;
+  }
+  .week-day-empty{color:var(--muted); font-size:13px; font-style:italic; padding:4px 0 2px;}
+  .week-day-rows{display:flex; flex-direction:column; gap:8px;}
+  .week-row{
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 10px;
+    padding:8px 10px; background:var(--cream); border-radius:8px; border-left:3px solid var(--navy);
+  }
+  .week-row-time{font-family:'Fraunces',serif; font-weight:700; font-size:13px; color:var(--navy); min-width:92px;}
+  .week-row-course{font-weight:700; font-size:13px; color:var(--ink);}
+  .week-row-batch{font-size:12px; color:var(--green-dark); font-weight:600;}
+  .week-row-room{font-size:12px; color:var(--muted); margin-left:auto;}
+
+  .week-table{width:100%; border-collapse:collapse; background:var(--paper); box-shadow:var(--shadow); border-radius:10px; overflow:hidden;}
+  .week-table th, .week-table td{border:1px solid var(--line); padding:9px 12px; font-size:13.5px; text-align:center;}
+  .week-table th{background:var(--navy); color:#fff; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em;}
+  .week-table td.week-day-cell{
+    font-family:'Fraunces',serif; font-weight:700; color:var(--navy); background:var(--cream);
+    vertical-align:middle; text-align:center; border-right:2px solid var(--navy-2); white-space:nowrap;
+  }
+  .week-table tr.week-day-start td{border-top:2px solid var(--navy-2);}
+  .week-table tr.week-day-empty-row td.week-empty-cell{color:var(--muted); font-style:italic; text-align:center; background:var(--cream);}
+  .week-table tbody tr:not(.week-day-empty-row):nth-child(even){background:var(--cream);}
+
+  .placeholder-note{
+    text-align:center; padding:50px 20px; color:var(--muted); font-size:14.5px;
+    background:var(--paper); border-radius:var(--radius); border:1px solid var(--line);
+    box-shadow:var(--shadow);
+  }
+
+  .empty-note{
+    text-align:center; padding:40px 20px; color:var(--muted); font-size:14.5px;
+    background:var(--paper); border-radius:var(--radius); border:1px solid var(--line);
+  }
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(29,58,95,.55); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:16px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--paper); border-radius:12px; padding:26px 26px 22px; width:100%; max-width:400px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);
+  }
+  .modal h3{margin:0 0 4px; font-family:'Fraunces',serif; color:var(--navy); font-size:20px;}
+  .modal .meta{font-size:13px; color:var(--muted); margin-bottom:18px;}
+  .modal .meta b{color:var(--navy);}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; font-weight:600; color:var(--navy); margin-bottom:5px;}
+  .field input{
+    width:100%; padding:9px 11px; border:1.5px solid #cfd2d6; border-radius:8px;
+    font-family:inherit; font-size:14.5px;
+  }
+  .field input:focus{outline:2px solid rgba(31,122,77,.4); border-color:var(--green);}
+  .scope-options{display:flex; flex-direction:column; gap:10px;}
+  .scope-options label{
+    display:flex; align-items:flex-start; gap:8px; font-weight:400; font-size:13.5px;
+    color:var(--ink); cursor:pointer;
+  }
+  .scope-options input[type="radio"]{margin-top:3px; accent-color:var(--navy); cursor:pointer;}
+  .modal-actions{display:flex; gap:10px; margin-top:20px;}
+  .btn{
+    flex:1; padding:10px 14px; border-radius:8px; font-weight:600; font-size:14.5px;
+    cursor:pointer; font-family:inherit; border:1.5px solid transparent;
+  }
+  .btn-primary{background:var(--green); color:#fff;}
+  .btn-primary:hover{background:var(--green-dark);}
+  .btn-ghost{background:transparent; color:var(--muted); border-color:#cfd2d6;}
+  .btn-ghost:hover{background:#f0eee8;}
+  .btn-danger{background:var(--navy); color:#fff;}
+  .btn-danger:hover{background:var(--navy-2);}
+
+  .confirm-modal .modal{max-width:340px; text-align:center;}
+  .confirm-modal h3{font-size:17.5px;}
+
+  footer.note{
+    margin-top:26px; font-size:12.5px; color:var(--muted); line-height:1.7;
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 18px;
+  }
+
+  @media (max-width:720px){
+    table.grid{font-size:12px;}
+    table.grid thead th{padding:8px 4px; font-size:12px;}
+    table.grid tbody td.room-cell{min-width:100px;}
+    .masthead{flex-direction:column; align-items:flex-start;}
+    .masthead-right{text-align:left;}
+  }
+
+  .print-btn{
+    border:1.5px solid var(--navy); color:#fff; background:var(--navy);
+    padding:8px 16px; border-radius:8px; font-size:13.5px; font-weight:600;
+    cursor:pointer; font-family:inherit;
+  }
+  .print-btn:hover{background:var(--navy-2);}
+
+  #printArea{display:none;}
+
+  @media print{
+    @page{ margin:10mm; }
+    body{background:#ffffff; color:#000000;}
+    .app{display:none !important;}
+    #printArea{display:block !important;}
+    .print-masthead{
+      text-align:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:18px;
+    }
+    .print-masthead .print-uni{
+      font-family:'Agency FB','Arial Narrow',sans-serif; font-size:40px; font-weight:700;
+      letter-spacing:.06em; text-transform:uppercase; color:#000;
+    }
+    .print-masthead .print-title{font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:#000;}
+    .print-day-section{page-break-after:always; margin-bottom:10px;}
+    .print-day-section:last-child{page-break-after:auto;}
+    .print-day-heading{
+      font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:#000;
+      border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:14px;
+    }
+    .grid-heading{color:#000 !important;}
+    table.grid{box-shadow:none; border:1px solid #000; width:100%; border-collapse:collapse;}
+    table.grid th, table.grid td{border:1px solid #000 !important;}
+    table.grid thead th, table.grid thead th.time-col, table.grid thead th.room-group-col{
+      background:#ffffff !important; color:#000000 !important;
+    }
+    table.grid tbody td.time-col{background:#ffffff !important; color:#000000 !important;}
+    table.grid tbody tr:nth-child(odd) td.time-col{background:#ffffff !important;}
+    .cell-busy, .cell-busy-date, .cell-label, .cell-label-date, .add-btn{
+      background:#ffffff !important; border:none !important;
+    }
+    .cell-busy .sec, .cell-busy .course, .cell-busy .teacher,
+    .cell-busy-date .sec, .cell-busy-date .course, .cell-busy-date .teacher,
+    .cell-label, .cell-label-date{
+      color:#000000 !important;
+    }
+    .add-btn{color:transparent !important;}
+    .add-btn .lbl{display:none !important;}
+    .cell-actions{display:none !important;}
+    .grid-block{page-break-inside:avoid; margin-bottom:16px;}
+
+    .week-table{box-shadow:none; border:1px solid #000; font-size:9.5pt;}
+    .week-table th, .week-table td{border:1px solid #000 !important; padding:4px 6px !important;}
+    .week-table th{background:#ffffff !important; color:#000 !important;}
+    .week-table td.week-day-cell{background:#ffffff !important; color:#000 !important;}
+    .week-table tbody tr:nth-child(even){background:#ffffff !important;}
+    .week-summary{color:#000; font-size:10.5pt; margin-bottom:10px;}
+    .week-summary-item b{color:#000;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="masthead">
+    <div class="masthead-left">
+      <div class="eyebrow">Southeast University</div>
+      <h1>SEU Law Routine Manager</h1>
+      <div class="sub">LLB (Hons.) &amp; LLM (Final), Fall 2026</div>
+    </div>
+    <div class="masthead-right">
+      <span id="roomsLine">Rooms: 413, 414, 416, 417, 418, 801</span><br>
+      <b>Every week</b> repeats the same routine, active until you import a new one<br>
+      <span id="sourceLine">Routine source: imported from <b>Class_Routine.doc</b> · 8/24/2026 · <a href="#" id="resetSourceLink" style="color:var(--navy);">reset to built-in sample</a></span>
+    </div>
+
+  </div>
+
+  <div class="semester-bar">
+    <span class="semester-label">Semester</span>
+    <select id="semesterSelect">
+      <option value="Spring">Spring</option>
+      <option value="Fall">Fall</option>
+    </select>
+    <span class="semester-label">Year</span>
+    <select id="yearSelect"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option></select>
+    <button class="btn btn-primary" id="applySemesterBtn">Apply</button>
+  </div>
+
+  <div class="view-tabs">
+    <button class="tab-btn active" id="tabGridBtn">Daily Class Information</button>
+    <button class="tab-btn" id="tabFacultyBtn">Daily &amp; Weekly Class View</button>
+  </div>
+
+  <div class="control-bar">
+    <div class="date-field">
+      <label for="datePick">Select date</label>
+      <div class="date-display-wrap">
+        <input type="date" id="datePick" min="2026-08-24" max="2028-08-23">
+        <div class="date-display" id="dateDisplay">25 August 2026</div>
+      </div>
+    </div>
+    <div class="day-chip" id="dayChip">Tuesday · 25-08-2026</div>
+    <div class="spacer"></div>
+    <div class="legend">
+      <span><span class="dot free"></span> Free room</span>
+      <span><span class="dot busy"></span> Class in session</span>
+      <span><span class="dot date-only"></span> One-off change (this date only)</span>
+    </div>
+    <button class="print-btn" id="importBtn">📥 Import</button>
+    <button class="print-btn" id="genBtn">⚙️ Generate</button>
+    <button class="print-btn" id="printBtn">🖨 Print</button>
+    <button class="print-btn" id="saveHtmlBtn" style="background:var(--navy);border-color:var(--navy);" disabled="">Saving…</button>
+    <button class="print-btn" id="linkFileBtn" style="background: var(--green); border-color: var(--green); opacity: 0.55;" title="Chrome / Edge only">🔗 Link this file for auto-save</button>
+    <button class="print-btn" id="clearBtn" style="background:var(--busy-bg);border-color:var(--busy-bg);">🗑 Clear data</button>
+  </div>
+  <div class="link-status" id="linkStatusLine" style="font-size: 12.5px; color: var(--muted); margin: -12px 0px 16px 2px; cursor: pointer;">Direct auto-save needs Chrome or Edge — Save/Update will download a new copy here.</div>
+  <div class="link-status" id="dbStatusLine" style="font-size: 12.5px; color: var(--muted); margin: -10px 0px 16px 2px;">Connecting to the shared database…</div>
+
+  <div id="gridPanel">
+    <div class="status-line" id="statusLine">9 time slots today · 37 room-slots occupied · 17 free</div>
+    <div id="gridWrap"><table class="grid"><thead><tr><th class="time-col" rowspan="2">Room No.</th><th class="room-group-col" colspan="9">Time</th></tr><tr><th>08:30-09:30</th><th>09:30-10:30</th><th>10:30-11:30</th><th>11:30-12:30</th><th>12:30-13:30</th><th>13:30-14:30</th><th>14:30-15:30</th><th>15:30-16:30</th><th>16:30-17:30</th></tr></thead><tbody><tr><td class="time-col">413</td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><div class="cell-busy"><div class="sec">65B</div><div class="course">ELL1202.2</div><div class="teacher">MUMA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">65B</div><div class="course">LLB1214.2</div><div class="teacher">DFHM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">64A</div><div class="course">GEN122.1</div><div class="teacher">NAO</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">64A</div><div class="course">ENG103.1</div><div class="teacher">SAHR</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">64A</div><div class="course">LLB212.1</div><div class="teacher">SAS</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">63A</div><div class="course">LLB223.1</div><div class="teacher">AYA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">63A</div><div class="course">LLB225.1</div><div class="teacher">MRHR</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td></tr><tr><td class="time-col">414</td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><div class="cell-busy"><div class="sec">64A</div><div class="course">LLB222.1</div><div class="teacher">AI</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy cell-busy-date"><div class="sec">61A</div><div class="course">ECO111</div><div class="teacher">AVIC</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy cell-busy-date"><div class="sec">61A</div><div class="course">ECO111</div><div class="teacher">AVIC</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy cell-busy-date"><div class="sec">61B</div><div class="course">ECO111</div><div class="teacher">AVIC</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">62B</div><div class="course">LLB231.2</div><div class="teacher">MJM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">62B</div><div class="course">LLB321.2</div><div class="teacher">BK</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">62B</div><div class="course">LLB235.2</div><div class="teacher">AI</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">62B</div><div class="course">LLB314.2</div><div class="teacher">NAO</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td></tr><tr><td class="time-col">416</td><td class="room-cell"><div class="cell-busy"><div class="sec">66A</div><div class="course">ELL1101.1</div><div class="teacher">MUMA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">66A</div><div class="course">LLB1115.1</div><div class="teacher">SMTA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">66A</div><div class="course">BEN1101.1</div><div class="teacher">MLA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">63B</div><div class="course">ENG105.2</div><div class="teacher">MUMA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-label"><span>DACM</span><div class="cell-actions"><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">61A</div><div class="course">LLB312.1</div><div class="teacher">RAD</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">61A</div><div class="course">LLB311.1</div><div class="teacher">MJM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">63B</div><div class="course">GED110.2</div><div class="teacher">ISL</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td></tr><tr><td class="time-col">417</td><td class="room-cell"><div class="cell-busy"><div class="sec">61B</div><div class="course">LLB311.2</div><div class="teacher">MJM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">61B</div><div class="course">LLB312.2</div><div class="teacher">RAD</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">65A</div><div class="course">LLB1212.1</div><div class="teacher">SMTA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">65A</div><div class="course">LLB1214.1</div><div class="teacher">DFHM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">66B</div><div class="course">ELL1101.2</div><div class="teacher">MUMA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">66B</div><div class="course">BEN1101.2</div><div class="teacher">JANA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">66B</div><div class="course">LLB1115.2</div><div class="teacher">SMTA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td></tr><tr><td class="time-col">418</td><td class="room-cell"><div class="cell-busy"><div class="sec">60B</div><div class="course">LLB332.2</div><div class="teacher">ISL</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">60B</div><div class="course">LLB411.2</div><div class="teacher">BK</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><div class="cell-busy"><div class="sec">61B</div><div class="course">LLB322.2</div><div class="teacher">MRHR</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-label"><span>DACM</span><div class="cell-actions"><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">63B</div><div class="course">LLB225.2</div><div class="teacher">MRHR</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">60A</div><div class="course">LLB334.1</div><div class="teacher">DFHM</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><div class="cell-busy"><div class="sec">60A</div><div class="course">LLB323.1</div><div class="teacher">SMTA</div><div class="cell-actions"><button title="Edit">✎</button><button title="Delete">×</button></div></div></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td></tr><tr><td class="time-col">801</td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td><td class="room-cell"><button class="add-btn">+<span class="lbl">Add class</span></button></td></tr></tbody></table></div>
+  </div>
+
+  <div id="facultyPanel" style="display:none;">
+    <div class="control-bar faculty-bar">
+      <div class="date-field">
+        <label for="facultySelect">Faculty</label>
+        <select id="facultySelect"><option value="">— Select a faculty —</option><option value="AI">AI — Mr. Md. Asraful Islam</option><option value="AMRS">AMRS — Mr. All Marufi Rahaman Sajon</option><option value="ARD">ARD — Mr. Arfan Ahmed</option><option value="AVIC">AVIC — Mr. Avishek Chakraborty</option><option value="AYA">AYA — Dr. Md. Ayub Ali</option><option value="BK">BK — Ms. Bahreen Khan</option><option value="DAHS">DAHS — Prof. Dr. M Ahsan Kabir</option><option value="DFHM">DFHM — Dr. Farhana Helal Mehtab</option><option value="DMG">DMG — Dr. Md. Alamgir</option><option value="DSU">DSU — Dr. Md. Sahal Uddin</option><option value="HAIS">HAIS — Mr. Hasibul Islam</option><option value="ISL">ISL — Mr. Ishraque Labib</option><option value="JANA">JANA — Ms. Jannatul Nabone</option><option value="KNM">KNM — Mr. Kazi Nafiul Mazid</option><option value="MAHA">MAHA — MAHA</option><option value="MAHM">MAHM — Mr. Mahbub Alam</option><option value="MFZ">MFZ — Mr. Mahfuzur Rahman</option><option value="MJM">MJM — Mr. Mohammad Jahid Mustofa</option><option value="MLA">MLA — Ms. Lizu Akter</option><option value="MMN">MMN — Dr. Mohammad Mohiuddin</option><option value="MNHC">MNHC — Mr. Mohammad Nurul Huda Chowdhury</option><option value="MRHR">MRHR — Mr. Md. Rakibul Hasan Roni</option><option value="MSAM">MSAM — Mr. Md. Salim Miah</option><option value="MUMA">MUMA — Mr. Muntasir Mansur</option><option value="NAO">NAO — Ms. Nafija Alam Omi</option><option value="RAD">RAD — Mr. Regan Ahmed</option><option value="SAHR">SAHR — Ms. Saima Ahmed Rafi</option><option value="SAS">SAS — Ms. Sadia Afroz Binte Siraj</option><option value="SHU">SHU — Mr. Mohammad Shihab Uddin</option><option value="SMTA">SMTA — Mr. S.M. Tasnimul Alam</option><option value="THR">THR — Mr. Sk. M. Tofayel Hasan</option></select>
+      </div>
+    </div>
+    <div id="facultyResult"><div class="placeholder-note">Select a faculty above to see their classes on this date.</div></div>
+
+    <div id="facultyWeekSection" style="margin-top:28px;">
+      <div class="result-heading">
+        <h2>Weekly Schedule (Friday – Thursday)</h2>
+        <div style="display:flex; gap:8px;">
+          <button class="print-btn" id="facultyPrintBtn">🖨 Print</button>
+          <button class="print-btn" id="facultyWordBtn">⬇ Download as Word</button>
+          <button class="print-btn" id="updateHtmlBtn" style="background:var(--navy);border-color:var(--navy);">🔄 Update</button>
+        </div>
+      </div>
+      <div id="facultyWeekTable"></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    This schedule is generated automatically from the department's recurring weekly routine (<b>Friday</b> through Thursday) and stays active for as long as the semester runs — whether that's 6 months, 8 months, or otherwise — until you import a new routine. Friday is shown as two separate tables — <b>Friday (LLB)</b> for the day-time rooms and <b>Friday (LLM)</b> for the evening room with its own time slots and the Friday Prayer break — matching the department's actual routine sheet. When adding or deleting a class you can choose whether it applies <b>only to that single date</b> or to <b>every occurrence of that weekday going forward</b> (e.g. every Wednesday). Changes are saved to this browser.
+  </footer>
+</div>
+
+<!-- Add class modal -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3>Add a class</h3>
+    <div class="meta" id="addMeta"></div>
+    <div class="field">
+      <label for="inSection">Section</label>
+      <input type="text" id="inSection" placeholder="e.g. 62A">
+    </div>
+    <div class="field">
+      <label for="inCourse">Course code</label>
+      <input type="text" id="inCourse" placeholder="e.g. LLB214.1">
+    </div>
+    <div class="field">
+      <label for="inTeacher">Teacher initials</label>
+      <input type="text" id="inTeacher" placeholder="e.g. DFHM">
+    </div>
+    <div class="field">
+      <label>Apply to</label>
+      <div class="scope-options">
+        <label><input type="radio" name="addScope" value="date" checked=""> Only this date <span id="addScopeDateLabel"></span></label>
+        <label><input type="radio" name="addScope" value="weekly"> Every <span id="addScopeWeekdayLabel"></span> (recurring, from now on)</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelAddBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmAddBtn">Add class</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="overlay confirm-modal" id="delOverlay">
+  <div class="modal">
+    <h3>Delete this class?</h3>
+    <div class="meta" id="delMeta"></div>
+    <div class="field" id="delScopeField" style="display:none;">
+      <div class="scope-options">
+        <label><input type="radio" name="delScope" value="date" checked=""> Remove from this date only</label>
+        <label><input type="radio" name="delScope" value="weekly"> Remove from every <span id="delScopeWeekdayLabel"></span></label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelDelBtn">Cancel</button>
+      <button class="btn btn-danger" id="confirmDelBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit class modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <h3>Edit class</h3>
+    <div class="meta" id="editMeta"></div>
+    <div class="field">
+      <label for="edSection">Section</label>
+      <input type="text" id="edSection" placeholder="e.g. 62A">
+    </div>
+    <div class="field">
+      <label for="edCourse">Course code</label>
+      <input type="text" id="edCourse" placeholder="e.g. LLB214.1">
+    </div>
+    <div class="field">
+      <label for="edTeacher">Teacher initials</label>
+      <input type="text" id="edTeacher" placeholder="e.g. DFHM">
+    </div>
+    <div class="field" id="editScopeField">
+      <label>Apply to</label>
+      <div class="scope-options">
+        <label><input type="radio" name="editScope" value="date" checked=""> Only this date <span id="editScopeDateLabel"></span></label>
+        <label><input type="radio" name="editScope" value="weekly"> Every <span id="editScopeWeekdayLabel"></span> (recurring, from now on)</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelEditBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmEditBtn">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import routine modal -->
+<div class="overlay" id="importOverlay">
+  <div class="modal" style="max-width:460px;">
+    <h3>Import routine from a Word file</h3>
+    <div class="meta">
+      Upload the routine directly from Microsoft Word (.docx) or a Word-saved web page (.doc / .htm / .html).
+      The importer reads the same Room × Time table layout used in your department's sheet. This will <b>replace</b> the current
+      weekly routine (one-off and recurring changes you've made stay separate and still apply).
+    </div>
+    <div class="field">
+      <input type="file" id="importFileInput" accept=".docx,.doc,.htm,.html,.mht">
+    </div>
+    <div class="status-line" id="importStatus" style="margin:2px 0 0;"></div>
+    <div id="importSummary" style="display:none; font-size:13px; color:var(--ink); background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-top:8px; max-height:220px; overflow:auto; line-height:1.6;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelImportBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmImportBtn" disabled="">Import &amp; replace routine</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Word file modal -->
+<div class="overlay" id="genOverlay">
+  <div class="modal">
+    <h3>Generate Word file</h3>
+    <div class="meta">Choose the date range to include. This downloads a .doc file formatted like a routine sheet, using the current effective schedule (base routine + your weekly/date changes).</div>
+    <div class="field">
+      <label for="genFrom">From date</label>
+      <input type="date" id="genFrom" min="2026-08-24" max="2028-08-23">
+    </div>
+    <div class="field">
+      <label for="genTo">To date</label>
+      <input type="date" id="genTo" min="2026-08-24" max="2028-08-23">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelGenBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmGenBtn">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear all data confirm modal -->
+<div class="overlay confirm-modal" id="clearOverlay">
+  <div class="modal">
+    <h3>Clear all data?</h3>
+    <div class="meta">This permanently deletes any imported routine and every date-specific or weekly change you've made, then resets the app to the built-in sample routine. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelClearBtn">Cancel</button>
+      <button class="btn btn-danger" id="confirmClearBtn">Clear everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print date-range modal -->
+<div class="overlay" id="printRangeOverlay">
+  <div class="modal">
+    <h3>Print schedule</h3>
+    <div class="meta">Choose the date range you want to print.</div>
+    <div class="field">
+      <label for="printFrom">From date</label>
+      <input type="date" id="printFrom" min="2026-08-24" max="2028-08-23">
+    </div>
+    <div class="field">
+      <label for="printTo">To date</label>
+      <input type="date" id="printTo" min="2026-08-24" max="2028-08-23">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelPrintBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmPrintBtn">Print</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const BASE_SCHEDULE = {"Sunday":[{"time":"10:30-11:30","room":"413","type":"class","section":"65B","course":"ELL1202.2","teacher":"MUMA"},{"time":"11:30-12:30","room":"413","type":"class","section":"65B","course":"LLB1214.2","teacher":"DFHM"},{"time":"09:30-10:30","room":"414","type":"class","section":"65A","course":"LLB1212.1","teacher":"SMTA"},{"time":"10:30-11:30","room":"414","type":"class","section":"65A","course":"LLB1214.1","teacher":"DFHM"},{"time":"12:30-13:30","room":"414","type":"class","section":"62A","course":"LLB234.1","teacher":"ARD"},{"time":"13:30-14:30","room":"414","type":"class","section":"62A","course":"LLB314.1","teacher":"NAO"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"LLB314.2","teacher":"NAO"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"LLB234.2","teacher":"ARD"},{"time":"09:30-10:30","room":"416","type":"class","section":"64A","course":"ENG103.1","teacher":"SAHR"},{"time":"10:30-11:30","room":"416","type":"class","section":"64A","course":"LLB212.1","teacher":"SAS"},{"time":"11:30-12:30","room":"416","type":"class","section":"64A","course":"GEN122.1","teacher":"NAO"},{"time":"13:30-14:30","room":"416","type":"class","section":"63B","course":"LLB225.2","teacher":"MRHR"},{"time":"14:30-15:30","room":"416","type":"class","section":"63B","course":"ENG105.2","teacher":"MUMA"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB313.2","teacher":"ARD"},{"time":"10:30-11:30","room":"417","type":"class","section":"61B","course":"LLB322.2","teacher":"MRHR"},{"time":"11:30-12:30","room":"417","type":"class","section":"61B","course":"LLB333.2","teacher":"SAS"},{"time":"12:30-13:30","room":"417","type":"class","section":"60A","course":"LLB323.1","teacher":"SMTA"},{"time":"13:30-14:30","room":"417","type":"class","section":"60A","course":"LLB334.1","teacher":"DFHM"},{"time":"09:30-10:30","room":"418","type":"class","section":"66A","course":"ELL1101.1","teacher":"MUMA"},{"time":"10:30-11:30","room":"418","type":"class","section":"66A","course":"BEN1101.1","teacher":"MLA"},{"time":"11:30-12:30","room":"418","type":"class","section":"66A","course":"LLB1115.1","teacher":"SMTA"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"ELL1101.2","teacher":"MUMA"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"BEN1101.2","teacher":"JANA"},{"time":"14:30-15:30","room":"418","type":"class","section":"66B","course":"LLB1115.2","teacher":"SMTA"}],"Monday":[{"time":"08:30-09:30","room":"413","type":"class","section":"59A","course":"LLB414.1","teacher":"AYA"},{"time":"09:30-10:30","room":"413","type":"class","section":"59A","course":"LLB421.1","teacher":"ARD"},{"time":"10:30-11:30","room":"413","type":"class","section":"59A","course":"LLB413.1","teacher":"SAS"},{"time":"11:30-12:30","room":"413","type":"class","section":"65B","course":"GED1202.2","teacher":"ISL"},{"time":"12:30-13:30","room":"413","type":"class","section":"65B","course":"LLB1211.2","teacher":"RAD"},{"time":"13:30-14:30","room":"413","type":"class","section":"59B","course":"LLB414.2","teacher":"AYA"},{"time":"14:30-15:30","room":"413","type":"class","section":"65B","course":"LLB1212.2","teacher":"SMTA"},{"time":"15:30-16:30","room":"413","type":"class","section":"65B","course":"GED3268.2","teacher":"MRHR"},{"time":"08:30-09:30","room":"414","type":"class","section":"62A","course":"LLB321.1","teacher":"BK"},{"time":"09:30-10:30","room":"414","type":"class","section":"62A","course":"LLB231.1","teacher":"MJM"},{"time":"10:30-11:30","room":"414","type":"class","section":"62A","course":"LLB235.1","teacher":"AI"},{"time":"11:30-12:30","room":"414","type":"class","section":"63A","course":"ENG105.1","teacher":"MUMA"},{"time":"12:30-13:30","room":"414","type":"class","section":"63A","course":"LLB225.1","teacher":"MRHR"},{"time":"13:30-14:30","room":"414","type":"class","section":"64B","course":"LLB212.2","teacher":"SAS"},{"time":"14:30-15:30","room":"414","type":"class","section":"64B","course":"LLB222.2","teacher":"AI"},{"time":"15:30-16:30","room":"414","type":"class","section":"64B","course":"GEN122.2","teacher":"NAO"},{"time":"16:30-17:30","room":"414","type":"class","section":"64B","course":"ENG103.2","teacher":"SAHR"},{"time":"08:30-09:30","room":"416","type":"class","section":"65A","course":"GED3268.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"416","type":"class","section":"65A","course":"GED1202.1","teacher":"ISL"},{"time":"10:30-11:30","room":"416","type":"class","section":"65A","course":"LLB1211.1","teacher":"RAD"},{"time":"11:30-12:30","room":"416","type":"class","section":"60B","course":"LLB411.2","teacher":"BK"},{"time":"12:30-13:30","room":"416","type":"class","section":"60B","course":"LLB332.2","teacher":"ISL"},{"time":"13:30-14:30","room":"416","type":"class","section":"65A","course":"ELL1202.1","teacher":"MUMA"},{"time":"14:30-15:30","room":"416","type":"class","section":"60B","course":"LLB335.2","teacher":"NAO"},{"time":"15:30-16:30","room":"416","type":"class","section":"60B","course":"LLB323.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"417","type":"class","section":"60A","course":"LLB332.1","teacher":"ISL"},{"time":"09:30-10:30","room":"417","type":"class","section":"60A","course":"LLB411.1","teacher":"BK"},{"time":"10:30-11:30","room":"417","type":"class","section":"60A","course":"LLB335.1","teacher":"NAO"},{"time":"11:30-12:30","room":"417","type":"class","section":"66A","course":"LLB1111.1","teacher":"AI"},{"time":"12:30-13:30","room":"417","type":"class","section":"66A","course":"LLB1213.1","teacher":"AYA"},{"time":"13:30-14:30","room":"417","type":"class","section":"66A","course":"LLB1114.1","teacher":"BK"},{"time":"14:30-15:30","room":"417","type":"class","section":"59B","course":"LLB413.2","teacher":"SAS"},{"time":"15:30-16:30","room":"417","type":"class","section":"59B","course":"LLB421.2","teacher":"ARD"},{"time":"08:30-09:30","room":"418","type":"class","section":"61A","course":"LLB311.1","teacher":"MJM"},{"time":"09:30-10:30","room":"418","type":"class","section":"61A","course":"LLB333.1","teacher":"SAS"},{"time":"10:30-11:30","room":"418","type":"class","section":"61A","course":"LLB313.1","teacher":"ARD"},{"time":"11:30-12:30","room":"418","type":"class","section":"61A","course":"LLB322.1","teacher":"MRHR"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"LLB1114.2","teacher":"BK"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"LLB1111.2","teacher":"AI"},{"time":"14:30-15:30","room":"418","type":"class","section":"66B","course":"LLB1213.2","teacher":"AYA"}],"Tuesday":[{"time":"09:30-10:30","room":"413","type":"class","section":"65B","course":"ELL1202.2","teacher":"MUMA"},{"time":"10:30-11:30","room":"413","type":"class","section":"65B","course":"LLB1214.2","teacher":"DFHM"},{"time":"11:30-12:30","room":"413","type":"class","section":"64A","course":"GEN122.1","teacher":"NAO"},{"time":"12:30-13:30","room":"413","type":"class","section":"64A","course":"ENG103.1","teacher":"SAHR"},{"time":"13:30-14:30","room":"413","type":"class","section":"64A","course":"LLB212.1","teacher":"SAS"},{"time":"14:30-15:30","room":"413","type":"class","section":"63A","course":"LLB223.1","teacher":"AYA"},{"time":"15:30-16:30","room":"413","type":"class","section":"63A","course":"LLB225.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"414","type":"class","section":"64A","course":"LLB222.1","teacher":"AI"},{"time":"13:30-14:30","room":"414","type":"class","section":"62B","course":"LLB231.2","teacher":"MJM"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"LLB321.2","teacher":"BK"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"LLB235.2","teacher":"AI"},{"time":"16:30-17:30","room":"414","type":"class","section":"62B","course":"LLB314.2","teacher":"NAO"},{"time":"08:30-09:30","room":"416","type":"class","section":"66A","course":"ELL1101.1","teacher":"MUMA"},{"time":"09:30-10:30","room":"416","type":"class","section":"66A","course":"LLB1115.1","teacher":"SMTA"},{"time":"10:30-11:30","room":"416","type":"class","section":"66A","course":"BEN1101.1","teacher":"MLA"},{"time":"11:30-12:30","room":"416","type":"class","section":"63B","course":"ENG105.2","teacher":"MUMA"},{"time":"12:30-13:30","room":"416","type":"label","label":"DACM"},{"time":"13:30-14:30","room":"416","type":"class","section":"61A","course":"LLB312.1","teacher":"RAD"},{"time":"14:30-15:30","room":"416","type":"class","section":"61A","course":"LLB311.1","teacher":"MJM"},{"time":"15:30-16:30","room":"416","type":"class","section":"63B","course":"GED110.2","teacher":"ISL"},{"time":"08:30-09:30","room":"417","type":"class","section":"61B","course":"LLB311.2","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB312.2","teacher":"RAD"},{"time":"10:30-11:30","room":"417","type":"class","section":"65A","course":"LLB1212.1","teacher":"SMTA"},{"time":"11:30-12:30","room":"417","type":"class","section":"65A","course":"LLB1214.1","teacher":"DFHM"},{"time":"12:30-13:30","room":"417","type":"class","section":"66B","course":"ELL1101.2","teacher":"MUMA"},{"time":"13:30-14:30","room":"417","type":"class","section":"66B","course":"BEN1101.2","teacher":"JANA"},{"time":"14:30-15:30","room":"417","type":"class","section":"66B","course":"LLB1115.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"418","type":"class","section":"60B","course":"LLB332.2","teacher":"ISL"},{"time":"09:30-10:30","room":"418","type":"class","section":"60B","course":"LLB411.2","teacher":"BK"},{"time":"11:30-12:30","room":"418","type":"class","section":"61B","course":"LLB322.2","teacher":"MRHR"},{"time":"12:30-13:30","room":"418","type":"label","label":"DACM"},{"time":"13:30-14:30","room":"418","type":"class","section":"63B","course":"LLB225.2","teacher":"MRHR"},{"time":"14:30-15:30","room":"418","type":"class","section":"60A","course":"LLB334.1","teacher":"DFHM"},{"time":"15:30-16:30","room":"418","type":"class","section":"60A","course":"LLB323.1","teacher":"SMTA"}],"Wednesday":[{"time":"08:30-09:30","room":"413","type":"class","section":"60A","course":"LLB335.1","teacher":"NAO"},{"time":"09:30-10:30","room":"413","type":"class","section":"60A","course":"LLB411.1","teacher":"BK"},{"time":"10:30-11:30","room":"413","type":"class","section":"60A","course":"LLB332.1","teacher":"ISL"},{"time":"12:30-13:30","room":"413","type":"class","section":"64B","course":"ENG103.2","teacher":"SAHR"},{"time":"13:30-14:30","room":"413","type":"class","section":"64B","course":"LLB212.2","teacher":"SAS"},{"time":"14:30-15:30","room":"413","type":"class","section":"64B","course":"GEN122.2","teacher":"NAO"},{"time":"09:30-10:30","room":"414","type":"class","section":"59A","course":"LLB421.1","teacher":"ARD"},{"time":"10:30-11:30","room":"414","type":"class","section":"59A","course":"LLB413.1","teacher":"SAS"},{"time":"11:30-12:30","room":"414","type":"class","section":"65A","course":"LLB1211.1","teacher":"RAD"},{"time":"13:30-14:30","room":"414","type":"class","section":"65B","course":"LLB1212.2","teacher":"SMTA"},{"time":"14:30-15:30","room":"414","type":"class","section":"65B","course":"GED3268.2","teacher":"MRHR"},{"time":"15:30-16:30","room":"414","type":"class","section":"65B","course":"LLB1211.2","teacher":"RAD"},{"time":"16:30-17:30","room":"414","type":"class","section":"65B","course":"GED1202.2","teacher":"ISL"},{"time":"08:30-09:30","room":"416","type":"class","section":"63A","course":"ENG105.1","teacher":"MUMA"},{"time":"09:30-10:30","room":"416","type":"class","section":"63A","course":"GED110.1","teacher":"ISL"},{"time":"10:30-11:30","room":"416","type":"class","section":"63B","course":"LLB224.2","teacher":"MJM"},{"time":"11:30-12:30","room":"416","type":"class","section":"63B","course":"LLB223.2","teacher":"AYA"},{"time":"12:30-13:30","room":"416","type":"class","section":"63B","course":"LLB232.2","teacher":"RAD"},{"time":"13:30-14:30","room":"416","type":"class","section":"65A","course":"GED3268.1","teacher":"MRHR"},{"time":"14:30-15:30","room":"416","type":"class","section":"65A","course":"GED1202.1","teacher":"ISL"},{"time":"15:30-16:30","room":"416","type":"class","section":"65A","course":"ELL1202.1","teacher":"MUMA"},{"time":"08:30-09:30","room":"417","type":"class","section":"62A","course":"LLB231.1","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"62A","course":"LLB314.1","teacher":"NAO"},{"time":"10:30-11:30","room":"417","type":"class","section":"66A","course":"LLB1213.1","teacher":"AYA"},{"time":"11:30-12:30","room":"417","type":"class","section":"66A","course":"LLB1111.1","teacher":"AI"},{"time":"12:30-13:30","room":"417","type":"class","section":"66A","course":"LLB1114.1","teacher":"BK"},{"time":"13:30-14:30","room":"417","type":"class","section":"60B","course":"LLB335.2","teacher":"NAO"},{"time":"14:30-15:30","room":"417","type":"class","section":"60B","course":"LLB323.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"418","type":"class","section":"61A","course":"LLB322.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"418","type":"class","section":"61A","course":"LLB333.1","teacher":"SAS"},{"time":"10:30-11:30","room":"418","type":"class","section":"61A","course":"LLB313.1","teacher":"ARD"},{"time":"11:30-12:30","room":"418","type":"class","section":"66B","course":"LLB1114.2","teacher":"BK"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"LLB1111.2","teacher":"AI"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"LLB1213.2","teacher":"AYA"},{"time":"14:30-15:30","room":"418","type":"class","section":"59B","course":"LLB414.2","teacher":"AYA"},{"time":"15:30-16:30","room":"418","type":"class","section":"59B","course":"LLB413.2","teacher":"SAS"},{"time":"16:30-17:30","room":"418","type":"class","section":"59B","course":"LLB421.2","teacher":"ARD"},{"time":"12:30-13:30","room":"801","type":"class","section":"62A","course":"LLB234.1","teacher":"ARD"},{"time":"13:30-14:30","room":"801","type":"class","section":"62A","course":"LLB235.1","teacher":"AI"}],"Thursday":[{"time":"10:30-11:30","room":"413","type":"class","section":"63A","course":"GED110.1","teacher":"ISL"},{"time":"11:30-12:30","room":"413","type":"class","section":"63A","course":"LLB224.1","teacher":"MJM"},{"time":"12:30-13:30","room":"413","type":"class","section":"63A","course":"LLB232.1","teacher":"RAD"},{"time":"14:30-15:30","room":"413","type":"class","section":"63A","course":"LLB223.1","teacher":"AYA"},{"time":"08:30-09:30","room":"414","type":"class","section":"63B","course":"GED110.2","teacher":"ISL"},{"time":"09:30-10:30","room":"414","type":"class","section":"63B","course":"LLB224.2","teacher":"MJM"},{"time":"12:30-13:30","room":"414","type":"class","section":"63B","course":"LLB223.2","teacher":"AYA"},{"time":"13:30-14:30","room":"414","type":"class","section":"63B","course":"LLB232.2","teacher":"RAD"},{"time":"10:30-11:30","room":"416","type":"class","section":"64B","course":"LLB222.2","teacher":"AI"},{"time":"11:30-12:30","room":"416","type":"class","section":"64B","course":"CSE105.2","teacher":"AVIC"},{"time":"12:30-13:30","room":"416","type":"class","section":"64B","course":"CSE105.2","teacher":"AVIC"},{"time":"08:30-09:30","room":"417","type":"class","section":"61B","course":"LLB311.2","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB313.2","teacher":"ARD"},{"time":"10:30-11:30","room":"417","type":"class","section":"61B","course":"LLB333.2","teacher":"SAS"},{"time":"11:30-12:30","room":"417","type":"class","section":"61B","course":"LLB312.2","teacher":"RAD"},{"time":"12:30-13:30","room":"417","type":"class","section":"64A","course":"LLB222.1","teacher":"AI"},{"time":"13:30-14:30","room":"417","type":"class","section":"64A","course":"CSE105.1","teacher":"AVIC"},{"time":"14:30-15:30","room":"417","type":"class","section":"64A","course":"CSE105.1","teacher":"AVIC"},{"time":"11:30-12:30","room":"418","type":"class","section":"62B","course":"LLB235.2","teacher":"AI"},{"time":"12:30-13:30","room":"418","type":"class","section":"62B","course":"LLB231.2","teacher":"MJM"},{"time":"13:30-14:30","room":"418","type":"class","section":"62B","course":"LLB234.2","teacher":"ARD"},{"time":"08:30-09:30","room":"801","type":"class","section":"58A","course":"LLB433.1","teacher":"KNM"},{"time":"09:30-10:30","room":"801","type":"class","section":"58A","course":"LLB433.1","teacher":"KNM"},{"time":"11:30-12:30","room":"801","type":"class","section":"58A","course":"LLB421.3","teacher":"ARD"},{"time":"12:30-13:30","room":"801","type":"class","section":"58A","course":"LLB421.3","teacher":"ARD"}],"Friday":[{"time":"12:30-14:00","room":"413","type":"label","label":"Prayer Break","group":"LLB"},{"time":"15:00-16:00","room":"413","type":"class","section":"60A","course":"LLB434.1","teacher":"DMG","group":"LLB"},{"time":"16:00-17:00","room":"413","type":"class","section":"60A","course":"LLB434.1","teacher":"DMG","group":"LLB"},{"time":"08:30-09:30","room":"414","type":"class","section":"59A","course":"LLB435.1","teacher":"THR","group":"LLB"},{"time":"09:30-10:30","room":"414","type":"class","section":"59A","course":"LLB435.1","teacher":"THR","group":"LLB"},{"time":"10:30-11:30","room":"414","type":"class","section":"59A","course":"LLB414.1","teacher":"AYA","group":"LLB"},{"time":"12:30-14:00","room":"414","type":"label","label":"Prayer Break","group":"LLB"},{"time":"12:30-14:00","room":"416","type":"label","label":"Prayer Break","group":"LLB"},{"time":"14:00-15:00","room":"416","type":"class","section":"60B","course":"LLB434.2","teacher":"MAHA","group":"LLB"},{"time":"15:00-16:00","room":"416","type":"class","section":"60B","course":"LLB434.2","teacher":"MAHA","group":"LLB"},{"time":"08:30-09:50","room":"417","type":"class","section":"62","course":"LLM5215.1","teacher":"MMN","group":"LLM"},{"time":"10:00-11:20","room":"417","type":"class","section":"62","course":"LLM5215.1","teacher":"MMN","group":"LLM"},{"time":"11:30-12:50","room":"417","type":"class","section":"62","course":"LLM5225.1","teacher":"ISL","group":"LLM"},{"time":"13:00-14:20","room":"417","type":"label","label":"Prayer Break","group":"LLM"},{"time":"14:30-15:50","room":"417","type":"class","section":"62","course":"LLM5225.1","teacher":"ISL","group":"LLM"},{"time":"08:30-09:50","room":"418","type":"class","section":"63","course":"LLM5135.1","teacher":"AI","group":"LLM"},{"time":"10:00-11:20","room":"418","type":"class","section":"63","course":"LLM5135.1","teacher":"AI","group":"LLM"},{"time":"11:30-12:50","room":"418","type":"class","section":"63","course":"LLM5145.1","teacher":"AYA","group":"LLM"},{"time":"13:00-14:20","room":"418","type":"label","label":"Prayer Break","group":"LLM"},{"time":"14:30-15:50","room":"418","type":"class","section":"63","course":"LLM5145.1","teacher":"AYA","group":"LLM"}],"Saturday":[{"time":"08:30-09:30","room":"413","type":"class","section":"64A","course":"LLB226.1","teacher":"DAHS","group":"LLB"},{"time":"09:30-10:30","room":"413","type":"class","section":"64A","course":"LLB226.1","teacher":"DAHS","group":"LLB"},{"time":"10:30-11:30","room":"413","type":"class","section":"61A","course":"LLB312.1","teacher":"RAD","group":"LLB"},{"time":"11:30-12:30","room":"413","type":"class","section":"58A","course":"LLB423.1","teacher":"SHU","group":"LLB"},{"time":"12:30-13:30","room":"413","type":"class","section":"58A","course":"LLB423.1","teacher":"SHU","group":"LLB"},{"time":"13:30-14:30","room":"413","type":"class","section":"62B","course":"LLB321.2","teacher":"BK","group":"LLB"},{"time":"14:30-15:30","room":"413","type":"class","section":"60B","course":"LLB334.2","teacher":"MFZ","group":"LLB"},{"time":"15:30-16:30","room":"413","type":"class","section":"60B","course":"LLB334.2","teacher":"MFZ","group":"LLB"},{"time":"11:30-12:30","room":"414","type":"class","section":"62A","course":"LLB321.1","teacher":"BK","group":"LLB"},{"time":"12:30-13:30","room":"414","type":"class","section":"62A","course":"MGT111.1","teacher":"HAIS","group":"LLB"},{"time":"13:30-14:30","room":"414","type":"class","section":"62A","course":"MGT111.1","teacher":"HAIS","group":"LLB"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"MGT111.2","teacher":"HAIS","group":"LLB"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"MGT111.2","teacher":"HAIS","group":"LLB"},{"time":"10:30-11:30","room":"416","type":"class","section":"64B","course":"LLB226.2","teacher":"DAHS","group":"LLB"},{"time":"11:30-12:30","room":"416","type":"class","section":"64B","course":"LLB226.2","teacher":"DAHS","group":"LLB"},{"time":"12:30-13:30","room":"416","type":"class","section":"61A","course":"ECO111.1","teacher":"AMRS","group":"LLB"},{"time":"13:30-14:30","room":"416","type":"class","section":"61A","course":"ECO111.1","teacher":"AMRS","group":"LLB"},{"time":"14:30-15:30","room":"416","type":"class","section":"61B","course":"ECO111.2","teacher":"AMRS","group":"LLB"},{"time":"15:30-16:30","room":"416","type":"class","section":"61B","course":"ECO111.2","teacher":"AMRS","group":"LLB"},{"time":"08:30-09:30","room":"801","type":"class","section":"58A","course":"LLB432.1","teacher":"MSAM","group":"LLB"},{"time":"09:30-10:30","room":"801","type":"class","section":"58A","course":"LLB432.1","teacher":"MSAM","group":"LLB"},{"time":"10:30-11:30","room":"801","type":"class","section":"59B","course":"LLB435.2","teacher":"MNHC","group":"LLB"},{"time":"11:30-12:30","room":"801","type":"class","section":"59B","course":"LLB435.2","teacher":"MNHC","group":"LLB"},{"time":"12:30-13:30","room":"801","type":"class","section":"63A","course":"LLB232.1","teacher":"RAD","group":"LLB"},{"time":"14:30-15:30","room":"801","type":"class","section":"63A","course":"LLB224.1","teacher":"MJM","group":"LLB"},{"time":"08:30-09:50","room":"417","type":"class","section":"63","course":"GEN5115.1","teacher":"DSU","group":"LLM"},{"time":"10:00-11:20","room":"417","type":"class","section":"63","course":"GEN5115.1","teacher":"DSU","group":"LLM"},{"time":"11:30-12:50","room":"417","type":"class","section":"62","course":"LLM5235.1","teacher":"DSU","group":"LLM"},{"time":"13:00-14:20","room":"417","type":"class","section":"62","course":"LLM5235.1","teacher":"DSU","group":"LLM"},{"time":"08:30-09:50","room":"418","type":"class","section":"62","course":"LLM5245.1","teacher":"BK","group":"LLM"},{"time":"10:00-11:20","room":"418","type":"class","section":"62","course":"LLM5245.1","teacher":"BK","group":"LLM"},{"time":"11:30-12:50","room":"418","type":"class","section":"63","course":"LLM5125.1","teacher":"MJM","group":"LLM"},{"time":"13:00-14:20","room":"418","type":"class","section":"63","course":"LLM5125.1","teacher":"MJM","group":"LLM"},{"time":"14:30-15:50","room":"418","type":"class","section":"63","course":"LLM5115.1","teacher":"RAD","group":"LLM"},{"time":"16:00-17:20","room":"418","type":"class","section":"63","course":"LLM5115.1","teacher":"RAD","group":"LLM"}]};
+const ROOMS = ["413","414","416","417","418","801"];
+
+// ---- Storage layer ----
+// Every edit is stored in MongoDB through the /api/storage serverless endpoint,
+// so a change made on one computer shows up for everyone who opens the site.
+// If that endpoint is unreachable (this file opened straight from disk over
+// file://, the browser offline, or the database down) the app silently falls
+// back to this browser's localStorage so it keeps working — but edits made in
+// that state stay on that one computer.
+const STORAGE_PREFIX = 'seuLawRoutine:';
+const API_BASE = '/api/storage';
+const ADMIN_KEY_KEY = STORAGE_PREFIX + 'adminKey';
+const SEED_MARKER_KEY = 'meta:seedApplied';
+// One-off date changes made before this file was last updated/saved,
+// carried over so they still apply after this export.
+const SEED_DATE_OVERRIDES = {"override:2026-08-25":"{\"removed\":[],\"added\":[{\"time\":\"10:30-11:30\",\"room\":\"414\",\"type\":\"class\",\"section\":\"61A\",\"course\":\"ECO111\",\"teacher\":\"AVIC\"},{\"time\":\"11:30-12:30\",\"room\":\"414\",\"type\":\"class\",\"section\":\"61A\",\"course\":\"ECO111\",\"teacher\":\"AVIC\"},{\"time\":\"12:30-13:30\",\"room\":\"414\",\"type\":\"class\",\"section\":\"61B\",\"course\":\"ECO111\",\"teacher\":\"AVIC\"}]}"};
+// Seeding now happens in seedDateOverridesIfNeeded(), called from init().
+
+let apiOnline = false;
+let apiNeedsAuth = false;
+
+function localGet(key){
+  try{ return localStorage.getItem(STORAGE_PREFIX + key); }catch(e){ return null; }
+}
+function localSet(key, value){
+  try{ localStorage.setItem(STORAGE_PREFIX + key, value); }catch(e){ /* quota / private mode */ }
+}
+function localDelete(key){
+  try{ localStorage.removeItem(STORAGE_PREFIX + key); }catch(e){ /* nothing to remove */ }
+}
+function localList(prefix){
+  const full = STORAGE_PREFIX + (prefix || '');
+  const keys = [];
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf(full) === 0) keys.push(k.slice(STORAGE_PREFIX.length));
+    }
+  }catch(e){ /* no local storage available */ }
+  return keys;
+}
+
+function getAdminKey(){
+  try{ return localStorage.getItem(ADMIN_KEY_KEY) || ''; }catch(e){ return ''; }
+}
+function setAdminKey(value){
+  try{
+    if(value) localStorage.setItem(ADMIN_KEY_KEY, value);
+    else localStorage.removeItem(ADMIN_KEY_KEY);
+  }catch(e){ /* ignore */ }
+}
+
+async function apiFetch(query, options){
+  const opts = Object.assign({ cache: 'no-store' }, options || {});
+  opts.headers = Object.assign({}, opts.headers || {});
+  const adminKey = getAdminKey();
+  if(adminKey) opts.headers['x-admin-key'] = adminKey;
+  return fetch(API_BASE + (query || ''), opts);
+}
+
+// Writes retry once behind a password prompt, for deployments that set ADMIN_KEY.
+async function apiWrite(query, options){
+  let res = null;
+  try{ res = await apiFetch(query, options); }catch(e){ return null; }
+  if(res.status === 401){
+    const entered = window.prompt('Editing is password-protected on this site. Enter the admin password:');
+    if(!entered) return res;
+    setAdminKey(entered.trim());
+    try{ res = await apiFetch(query, options); }catch(e){ return null; }
+    if(res.status === 401) setAdminKey('');
+  }
+  return res;
+}
+
+async function probeApi(){
+  if(location.protocol === 'file:') return false;
+  try{
+    const res = await fetch(API_BASE + '?ping=1', { cache: 'no-store' });
+    if(!res.ok) return false;
+    const data = await res.json();
+    apiNeedsAuth = !!(data && data.auth);
+    return !!(data && data.ok);
+  }catch(e){ return false; }
+}
+
+function updateDbStatus(){
+  const el = document.getElementById('dbStatusLine');
+  if(!el) return;
+  if(apiOnline){
+    el.textContent = 'Connected to the shared database — every change is saved for everyone.' +
+      (apiNeedsAuth ? ' Editing asks for the admin password.' : '');
+    el.style.color = 'var(--green)';
+  }else{
+    el.textContent = 'Offline mode — changes are saved in this browser only and are not shared.';
+    el.style.color = 'var(--busy-bg)';
+  }
+}
+
+const appStorage = {
+  async get(key){
+    if(apiOnline){
+      let res = null;
+      try{ res = await apiFetch('?key=' + encodeURIComponent(key)); }catch(e){ res = null; }
+      if(res && res.status === 404){
+        localDelete(key);
+        throw new Error('key not found: ' + key);
+      }
+      if(res && res.ok){
+        const data = await res.json();
+        localSet(key, data.value);
+        return { key, value: data.value };
+      }
+    }
+    const raw = localGet(key);
+    if(raw === null) throw new Error('key not found: ' + key);
+    return { key, value: raw };
+  },
+  async set(key, value){
+    localSet(key, value);
+    if(apiOnline){
+      const res = await apiWrite('', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: key, value: value })
+      });
+      if(!res || !res.ok) return null;
+    }
+    return { key, value };
+  },
+  async delete(key){
+    localDelete(key);
+    if(apiOnline){
+      const res = await apiWrite('?key=' + encodeURIComponent(key), { method: 'DELETE' });
+      if(!res || !res.ok) return null;
+    }
+    return { key, deleted: true };
+  },
+  async list(prefix){
+    if(apiOnline){
+      let res = null;
+      try{ res = await apiFetch('?prefix=' + encodeURIComponent(prefix || '')); }catch(e){ res = null; }
+      if(res && res.ok){
+        const data = await res.json();
+        return { keys: (data && data.keys) || [], prefix };
+      }
+    }
+    return { keys: localList(prefix), prefix };
+  }
+};
+
+// One-off date changes baked into this file are pushed into the database the
+// first time it runs against a fresh one, then never again — the marker key
+// records that, so "Clear data" does not resurrect them later.
+async function seedDateOverridesIfNeeded(){
+  const seedKeys = Object.keys(SEED_DATE_OVERRIDES);
+  if(!seedKeys.length) return;
+  if(!apiOnline){
+    seedKeys.forEach(function(k){
+      if(localGet(k) === null) localSet(k, SEED_DATE_OVERRIDES[k]);
+    });
+    return;
+  }
+  let markerRes = null;
+  try{ markerRes = await apiFetch('?key=' + encodeURIComponent(SEED_MARKER_KEY)); }catch(e){ return; }
+  if(!markerRes || markerRes.status !== 404) return;
+  let existing = [];
+  try{
+    const listRes = await apiFetch('?prefix=' + encodeURIComponent('override:'));
+    if(listRes && listRes.ok){ const data = await listRes.json(); existing = data.keys || []; }
+  }catch(e){ /* treat the database as empty */ }
+  for(const k of seedKeys){
+    if(existing.indexOf(k) !== -1) continue;
+    await appStorage.set(k, SEED_DATE_OVERRIDES[k]);
+  }
+  await appStorage.set(SEED_MARKER_KEY, new Date().toISOString());
+}
+
+
+// Sunday-indexed (matches JS Date.getDay()); Friday is treated as the reference/first day of the week for display purposes.
+const DAY_KEYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_NAME = {
+  Sunday:'Sunday', Monday:'Monday', Tuesday:'Tuesday', Wednesday:'Wednesday',
+  Thursday:'Thursday', Friday:'Friday', Saturday:'Saturday'
+};
+
+function pad(n){ return n<10 ? '0'+n : ''+n; }
+function fmtDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseDateStr(s){
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function timeStartMinutes(t){
+  const start = t.split('-')[0];
+  const [h,m] = start.split(':').map(Number);
+  return h*60+m;
+}
+function timeEndMinutes(t){
+  const parts = t.split('-');
+  const end = parts.length > 1 ? parts[1] : parts[0];
+  const [h,m] = end.split(':').map(Number);
+  return h*60+m;
+}
+function cellKey(time, room){ return time+'|'+room; }
+function formatDisplayDate(dateStr){
+  const [y,m,d] = dateStr.split('-');
+  return d+'-'+m+'-'+y;
+}
+const LONG_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function formatLongDate(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return d+' '+LONG_MONTH_NAMES[m-1]+' '+y;
+}
+
+const today = new Date();
+today.setHours(0,0,0,0);
+const maxDate = new Date(today);
+maxDate.setDate(maxDate.getDate()+730);
+
+const datePick = document.getElementById('datePick');
+const dateDisplay = document.getElementById('dateDisplay');
+datePick.min = fmtDate(today);
+datePick.max = fmtDate(maxDate);
+datePick.value = fmtDate(today);
+dateDisplay.textContent = formatLongDate(datePick.value);
+
+const dayChip = document.getElementById('dayChip');
+const gridWrap = document.getElementById('gridWrap');
+const statusLine = document.getElementById('statusLine');
+const gridPanel = document.getElementById('gridPanel');
+const facultyPanel = document.getElementById('facultyPanel');
+const facultySelect = document.getElementById('facultySelect');
+const facultyResult = document.getElementById('facultyResult');
+const tabGridBtn = document.getElementById('tabGridBtn');
+const tabFacultyBtn = document.getElementById('tabFacultyBtn');
+
+tabGridBtn.addEventListener('click', () => {
+  tabGridBtn.classList.add('active');
+  tabFacultyBtn.classList.remove('active');
+  gridPanel.style.display = '';
+  facultyPanel.style.display = 'none';
+});
+tabFacultyBtn.addEventListener('click', () => {
+  tabFacultyBtn.classList.add('active');
+  tabGridBtn.classList.remove('active');
+  gridPanel.style.display = 'none';
+  facultyPanel.style.display = '';
+  renderFacultyView(getEffectiveEntries(currentDateStr).entries);
+});
+facultySelect.addEventListener('change', () => {
+  renderFacultyView(getEffectiveEntries(currentDateStr).entries);
+});
+
+// Keep the "currently in class" status fresh without needing any interaction.
+setInterval(() => {
+  if(facultyPanel.style.display !== 'none' && facultySelect.value){
+    renderFacultyView(getEffectiveEntries(currentDateStr).entries);
+  }
+}, 30000);
+
+document.getElementById('facultyPrintBtn').addEventListener('click', async () => {
+  const selected = facultySelect.value;
+  if(!selected){ alert('Please select a faculty first.'); return; }
+  const rows = await computeFacultyWeekRows(selected);
+  printArea.innerHTML = '';
+  const mast = document.createElement('div');
+  mast.className = 'print-masthead';
+  mast.innerHTML = '<div class="print-uni">Southeast University</div>' +
+    '<div class="print-title">Department of Law, ' + escapeHtml(semesterLabel()) + '</div>' +
+    '<div class="print-title" style="margin-top:14px;">&ldquo;' + escapeHtml(facultyDisplayName(selected)) + ' &ndash; Weekly Class Schedule&rdquo;</div>';
+  printArea.appendChild(mast);
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'grid-block';
+  tableWrap.innerHTML = buildFacultyWeekTableHtml(rows);
+  printArea.appendChild(tableWrap);
+  setTimeout(() => window.print(), 100);
+});
+
+document.getElementById('facultyWordBtn').addEventListener('click', async () => {
+  const selected = facultySelect.value;
+  if(!selected){ alert('Please select a faculty first.'); return; }
+  const btn = document.getElementById('facultyWordBtn');
+  btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Generating…';
+  const rows = await computeFacultyWeekRows(selected);
+  const bodyHtml = '<div style="text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:20px;">' +
+    '<div style="font-size:26pt;font-weight:bold;letter-spacing:2px;text-transform:uppercase;font-family:&quot;Agency FB&quot;,&quot;Arial Narrow&quot;,sans-serif;">SOUTHEAST UNIVERSITY</div>' +
+    '<div style="font-size:14pt;font-weight:bold;margin-top:4px;">Department of Law, ' + escapeHtml(semesterLabel()) + '</div>' +
+    '<div style="font-size:13pt;font-weight:bold;margin-top:14px;">&ldquo;' + escapeHtml(facultyDisplayName(selected)) + ' &ndash; Weekly Class Schedule&rdquo;</div>' +
+    '</div>' +
+    buildFacultyWeekWordTableHtml(rows);
+  const wordDoc = '<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta charset="utf-8"><title>Weekly Schedule</title></head><body>' + bodyHtml + '</body></html>';
+  const blob = new Blob(['\ufeff', wordDoc], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Weekly_Schedule_' + selected + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  btn.disabled = false; btn.textContent = originalText;
+});
+
+// Reliable calendar-open handler: the invisible input-over-display trick can
+// silently fail to catch clicks in some browsers, so we also force the
+// native picker open via showPicker() whenever the date box is clicked.
+const dateDisplayWrap = document.querySelector('.date-display-wrap');
+function openDatePicker(){
+  try{
+    if(typeof datePick.showPicker === 'function'){
+      datePick.showPicker();
+      return;
+    }
+  }catch(e){ /* fall through to focus-based fallback below */ }
+  datePick.focus();
+  if(typeof datePick.click === 'function') datePick.click();
+}
+dateDisplayWrap.addEventListener('click', openDatePicker);
+dateDisplay.addEventListener('click', openDatePicker);
+
+let currentOverride = { removed: [], added: [] };
+let currentWeekly = { removed: [], added: [] };
+const weeklyCache = {};
+let currentDateStr = datePick.value;
+let pendingAdd = null;
+let pendingDel = null;
+
+async function loadOverride(dateStr){
+  try{
+    const res = await appStorage.get('override:'+dateStr, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      return { removed: parsed.removed || [], added: parsed.added || [] };
+    }
+  }catch(e){ /* no override yet */ }
+  return { removed: [], added: [] };
+}
+
+async function saveOverride(dateStr, override){
+  try{
+    const result = await appStorage.set('override:'+dateStr, JSON.stringify(override), false);
+    if(!result){ statusLine.textContent = 'Could not save the change. Please try again.'; }
+  }catch(e){
+    statusLine.textContent = 'Something went wrong while saving.';
+  }
+}
+
+async function loadWeekly(dayKey){
+  if(weeklyCache[dayKey]) return weeklyCache[dayKey];
+  let result = { removed: [], added: [] };
+  try{
+    const res = await appStorage.get('weekly:'+dayKey, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      result = { removed: parsed.removed || [], added: parsed.added || [] };
+    }
+  }catch(e){ /* no weekly override yet */ }
+  weeklyCache[dayKey] = result;
+  return result;
+}
+
+async function saveWeekly(dayKey, override){
+  weeklyCache[dayKey] = override;
+  try{
+    const result = await appStorage.set('weekly:'+dayKey, JSON.stringify(override), false);
+    if(!result){ statusLine.textContent = 'Could not save the change. Please try again.'; }
+  }catch(e){
+    statusLine.textContent = 'Something went wrong while saving.';
+  }
+}
+
+async function refreshForDate(dateStr){
+  const d = parseDateStr(dateStr);
+  const dayKey = DAY_KEYS[d.getDay()];
+  currentOverride = await loadOverride(dateStr);
+  currentWeekly = await loadWeekly(dayKey);
+}
+
+function getEffectiveEntries(dateStr){
+  const d = parseDateStr(dateStr);
+  const dayKey = DAY_KEYS[d.getDay()];
+  const base = (BASE_SCHEDULE[dayKey] || []).map(e => ({...e, origin:'base'}));
+  const weeklyRemovedSet = new Set(currentWeekly.removed);
+  const afterWeeklyRemoved = base.filter(e => !weeklyRemovedSet.has(cellKey(e.time, e.room)));
+  const weeklyAdded = currentWeekly.added.map(e => ({...e, type: e.type || 'class', origin:'weekly'}));
+  const afterWeekly = afterWeeklyRemoved.concat(weeklyAdded);
+  const dateRemovedSet = new Set(currentOverride.removed);
+  const afterDateRemoved = afterWeekly.filter(e => !dateRemovedSet.has(cellKey(e.time, e.room)));
+  const dateAdded = currentOverride.added.map(e => ({...e, type: e.type || 'class', origin:'date'}));
+  return { dayKey, entries: afterDateRemoved.concat(dateAdded) };
+}
+
+function labelText(l){
+  const map = {ICT:'ICT Department', Textile:'Textile Department', 'Weekly Meeting':'Weekly Meeting', 'Friday Prayer':'Friday Prayer'};
+  return map[l] || l;
+}
+
+const FRIDAY_LLB_ROOMS = ['413','414','416','417'];
+const FRIDAY_LLM_ROOMS = ['418'];
+const SATURDAY_LLB_ROOMS = ['413','414','416','418','801'];
+const SATURDAY_LLM_ROOMS = ['417'];
+const DUAL_DAY_CONFIG = {"Friday":{"llbRooms":["413","414","416"],"llmRooms":["417","418"]},"Saturday":{"llbRooms":["413","414","416","801"],"llmRooms":["417","418"]}};
+
+// ---- Faculty View ----
+// Master faculty list provided by the department, merged with any teacher
+// codes found in the currently loaded schedule (base or imported).
+const PROVIDED_FACULTY = ["AI","ARD","AYA","BK","DFHM","ISL","MJM","MRHR","NAO","RAD","SAS","SMTA","JANA","MLA","MUMA","SAHR","AMRS","AVIC","DAHS","DMG","DSU","HAIS","KNM","MAHM","MFZ","MMN","MNHC","MSAM","SHU","THR"];
+// MAHM (department list) may appear as MAHA in some imported routine sheets — treat as the same person.
+const TEACHER_ALIASES = { "MAHM": ["MAHA"] };
+
+// Full name for each faculty initial, used for display (dropdown, headings,
+// live-status banner, print, and Word export). Matching/filtering logic still
+// uses the initial code internally, so this is purely cosmetic.
+const FACULTY_NAMES = {
+  "AI": "Mr. Md. Asraful Islam",
+  "ARD": "Mr. Arfan Ahmed",
+  "AYA": "Dr. Md. Ayub Ali",
+  "BK": "Ms. Bahreen Khan",
+  "DFHM": "Dr. Farhana Helal Mehtab",
+  "ISL": "Mr. Ishraque Labib",
+  "MJM": "Mr. Mohammad Jahid Mustofa",
+  "MRHR": "Mr. Md. Rakibul Hasan Roni",
+  "NAO": "Ms. Nafija Alam Omi",
+  "RAD": "Mr. Regan Ahmed",
+  "SAS": "Ms. Sadia Afroz Binte Siraj",
+  "SMTA": "Mr. S.M. Tasnimul Alam",
+  "JANA": "Ms. Jannatul Nabone",
+  "MLA": "Ms. Lizu Akter",
+  "MUMA": "Mr. Muntasir Mansur",
+  "SAHR": "Ms. Saima Ahmed Rafi",
+  "AMRS": "Mr. All Marufi Rahaman Sajon",
+  "AVIC": "Mr. Avishek Chakraborty",
+  "DAHS": "Prof. Dr. M Ahsan Kabir",
+  "DMG": "Dr. Md. Alamgir",
+  "DSU": "Dr. Md. Sahal Uddin",
+  "HAIS": "Mr. Hasibul Islam",
+  "KNM": "Mr. Kazi Nafiul Mazid",
+  "MAHM": "Mr. Mahbub Alam",
+  "MFZ": "Mr. Mahfuzur Rahman",
+  "MMN": "Dr. Mohammad Mohiuddin",
+  "MNHC": "Mr. Mohammad Nurul Huda Chowdhury",
+  "MSAM": "Mr. Md. Salim Miah",
+  "SHU": "Mr. Mohammad Shihab Uddin",
+  "THR": "Mr. Sk. M. Tofayel Hasan"
+};
+function facultyDisplayName(code){
+  return FACULTY_NAMES[code] || code;
+}
+
+let FACULTY_LIST = [];
+
+function collectScheduleTeachers(){
+  const set = new Set();
+  Object.values(BASE_SCHEDULE).forEach(list => list.forEach(e => { if(e.teacher) set.add(e.teacher); }));
+  return set;
+}
+
+function rebuildFacultyList(){
+  const scheduleTeachers = collectScheduleTeachers();
+  FACULTY_LIST = Array.from(new Set([...PROVIDED_FACULTY, ...scheduleTeachers])).sort((a,b)=>a.localeCompare(b));
+  const previousValue = facultySelect.value;
+  facultySelect.innerHTML = '<option value="">— Select a faculty —</option>';
+  FACULTY_LIST.forEach(code => {
+    const opt = document.createElement('option');
+    opt.value = code; opt.textContent = code + ' — ' + facultyDisplayName(code);
+    facultySelect.appendChild(opt);
+  });
+  if(FACULTY_LIST.includes(previousValue)) facultySelect.value = previousValue;
+}
+
+function matchesTeacher(entryTeacher, selected){
+  if(!entryTeacher || !selected) return false;
+  if(entryTeacher === selected) return true;
+  const aliases = TEACHER_ALIASES[selected] || [];
+  return aliases.includes(entryTeacher);
+}
+
+// Builds the " · Batch 62A" suffix shown after a course code.
+// If the section value doesn't already end in a letter, the trailing ".1" / ".2"
+// in the course code is read as Batch A / B and appended automatically
+// (e.g. course "LLB1111.1" + section "66" becomes "Batch 66A"; ".2" gives "...B").
+function formatSectionSuffix(course, section){
+  if(!section) return '';
+  const c = course || '';
+  let value = section;
+  if(!/[A-Za-z]$/.test(value)){
+    const m = c.match(/\.(\d)$/);
+    if(m && m[1] === '1') value += 'A';
+    else if(m && m[1] === '2') value += 'B';
+  }
+  return ' · Batch ' + value;
+}
+
+// The department's routine week runs Friday through Thursday (matches the
+// order the base schedule and weekly overrides are organised by).
+const WEEK_ORDER = ['Friday','Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday'];
+
+// Computes one faculty's full weekly teaching schedule (recurring routine:
+// base schedule + any weekly-recurring overrides — NOT one-off date overrides,
+// since this is a general "every week" view, not tied to a specific date).
+async function computeFacultyWeekRows(selected){
+  const rows = [];
+  for(const day of WEEK_ORDER){
+    const weekly = await loadWeekly(day);
+    const base = (BASE_SCHEDULE[day] || []).map(e => ({...e, origin:'base'}));
+    const weeklyRemovedSet = new Set(weekly.removed);
+    const afterRemoved = base.filter(e => !weeklyRemovedSet.has(cellKey(e.time, e.room)));
+    const weeklyAdded = weekly.added.map(e => ({...e, type: e.type || 'class', origin:'weekly'}));
+    const entries = afterRemoved.concat(weeklyAdded);
+    const mine = entries
+      .filter(e => e.type === 'class' && matchesTeacher(e.teacher, selected))
+      .sort((a,b) => timeStartMinutes(a.time) - timeStartMinutes(b.time));
+    mine.forEach(e => {
+      rows.push({
+        day,
+        time: e.time,
+        course: e.course || '',
+        batch: formatSectionSuffix(e.course, e.section).replace(/^ · Batch /, ''),
+        room: e.room
+      });
+    });
+  }
+  return rows;
+}
+
+function buildFacultyWeekPrettyHtml(rows){
+  const byDay = {};
+  WEEK_ORDER.forEach(d => byDay[d] = []);
+  rows.forEach(r => byDay[r.day].push(r));
+
+  const total = rows.length;
+  let html = '<div class="week-summary"><span class="week-summary-item"><b>'+total+'</b> class'+(total===1?'':'es')+' this week</span></div>';
+  html += '<div class="week-day-grid">';
+  WEEK_ORDER.forEach(day => {
+    const dayRows = byDay[day];
+    const isFriday = day === 'Friday';
+    html += '<div class="week-day-card'+(dayRows.length===0 ? ' is-empty' : '')+(isFriday ? ' is-friday' : '')+'">';
+    html += '<div class="week-day-head"><span class="week-day-name">'+DAY_NAME[day]+'</span><span class="week-day-count">'+dayRows.length+'</span></div>';
+    if(dayRows.length === 0){
+      html += '<div class="week-day-empty">No classes</div>';
+    } else {
+      html += '<div class="week-day-rows">';
+      dayRows.forEach(r => {
+        html += '<div class="week-row">' +
+          '<span class="week-row-time">'+r.time+'</span>' +
+          '<span class="week-row-course">'+(r.course||'')+'</span>' +
+          (r.batch ? '<span class="week-row-batch">Batch '+r.batch+'</span>' : '') +
+          '<span class="week-row-room">Room '+r.room+'</span>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function buildFacultyWeekTableHtml(rows){
+  if(rows.length === 0){
+    return '<div class="empty-note">This faculty has no classes anywhere in the weekly routine.</div>';
+  }
+  let html = '<table class="week-table"><thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Batch</th><th>Room</th></tr></thead><tbody>';
+  WEEK_ORDER.forEach(day => {
+    const dayRows = rows.filter(r => r.day === day);
+    if(dayRows.length === 0){
+      html += '<tr class="week-day-start week-day-empty-row"><td class="week-day-cell">'+DAY_NAME[day]+'</td><td colspan="4" class="week-empty-cell">No classes</td></tr>';
+      return;
+    }
+    dayRows.forEach((r, i) => {
+      html += '<tr class="'+(i===0 ? 'week-day-start' : '')+'">';
+      if(i === 0){
+        html += '<td class="week-day-cell" rowspan="'+dayRows.length+'">'+DAY_NAME[day]+'</td>';
+      }
+      html += '<td>'+r.time+'</td><td>'+(r.course||'')+'</td><td>'+(r.batch||'—')+'</td><td>'+r.room+'</td></tr>';
+    });
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function buildFacultyWeekWordTableHtml(rows){
+  let html = '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;font-family:Calibri,Arial,sans-serif;font-size:11pt;border:1px solid #e2e0da;">';
+  html += '<thead><tr>' +
+    '<td style="background:#14532d;color:#ffffff;padding:6px 8px;text-align:center;font-weight:bold;text-transform:uppercase;font-size:9.5pt;">Day</td>' +
+    '<td style="background:#14532d;color:#ffffff;padding:6px 8px;text-align:center;font-weight:bold;text-transform:uppercase;font-size:9.5pt;">Time</td>' +
+    '<td style="background:#14532d;color:#ffffff;padding:6px 8px;text-align:center;font-weight:bold;text-transform:uppercase;font-size:9.5pt;">Course</td>' +
+    '<td style="background:#14532d;color:#ffffff;padding:6px 8px;text-align:center;font-weight:bold;text-transform:uppercase;font-size:9.5pt;">Batch</td>' +
+    '<td style="background:#14532d;color:#ffffff;padding:6px 8px;text-align:center;font-weight:bold;text-transform:uppercase;font-size:9.5pt;">Room</td>' +
+    '</tr></thead><tbody>';
+
+  if(rows.length === 0){
+    html += '<tr><td colspan="5" style="padding:10px;text-align:center;font-style:italic;color:#767c85;">No classes scheduled anywhere in the weekly routine.</td></tr>';
+  } else {
+    WEEK_ORDER.forEach(day => {
+      const dayRows = rows.filter(r => r.day === day);
+      if(dayRows.length === 0){
+        html += '<tr>' +
+          '<td style="background:#f5f4f0;color:#14532d;font-weight:bold;text-align:center;padding:6px 8px;border-top:2px solid #1e7d32;border-right:2px solid #1e7d32;">'+escapeHtml(DAY_NAME[day])+'</td>' +
+          '<td colspan="4" style="color:#767c85;font-style:italic;text-align:center;padding:6px 8px;border-top:2px solid #1e7d32;">No classes</td>' +
+          '</tr>';
+        return;
+      }
+      dayRows.forEach((r, i) => {
+        const topBorder = i === 0 ? 'border-top:2px solid #1e7d32;' : '';
+        const rowBg = (i % 2 === 1) ? 'background:#f5f4f0;' : '';
+        html += '<tr>';
+        if(i === 0){
+          html += '<td rowspan="'+dayRows.length+'" style="background:#f5f4f0;color:#14532d;font-weight:bold;text-align:center;vertical-align:middle;padding:6px 8px;border-right:2px solid #1e7d32;'+topBorder+'">'+escapeHtml(DAY_NAME[day])+'</td>';
+        }
+        html += '<td style="text-align:center;padding:6px 8px;'+topBorder+rowBg+'">'+escapeHtml(r.time)+'</td>' +
+          '<td style="text-align:center;padding:6px 8px;'+topBorder+rowBg+'">'+escapeHtml(r.course||'')+'</td>' +
+          '<td style="text-align:center;padding:6px 8px;'+topBorder+rowBg+'">'+escapeHtml(r.batch||'—')+'</td>' +
+          '<td style="text-align:center;padding:6px 8px;'+topBorder+rowBg+'">'+escapeHtml(r.room)+'</td>' +
+          '</tr>';
+      });
+    });
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+async function updateFacultyWeekTable(selected){
+  const weekTableEl = document.getElementById('facultyWeekTable');
+  if(!weekTableEl) return;
+  const rows = await computeFacultyWeekRows(selected);
+  const summary = rows.length
+    ? '<div class="week-summary"><span class="week-summary-item"><b>'+rows.length+'</b> class'+(rows.length===1?'':'es')+' this week</span></div>'
+    : '';
+  weekTableEl.innerHTML = summary + buildFacultyWeekTableHtml(rows);
+}
+
+// Returns {start, end} in minutes-since-midnight for a "HH:MM-HH:MM" range.
+function timeRangeMinutes(t){
+  const [s, e] = t.split('-');
+  const toMin = str => { const [h, m] = str.split(':').map(Number); return h*60+m; };
+  return { start: toMin(s), end: toMin(e) };
+}
+// True when right now falls inside the given "HH:MM-HH:MM" class time range.
+function isLiveNow(timeStr){
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const { start, end } = timeRangeMinutes(timeStr);
+  return nowMin >= start && nowMin < end;
+}
+
+async function renderFacultyView(entries){
+  if(!facultyResult) return;
+  const selected = facultySelect.value;
+  const d = parseDateStr(currentDateStr);
+  const dayKey = DAY_KEYS[d.getDay()];
+
+  if(!selected){
+    facultyResult.innerHTML = '<div class="placeholder-note">Select a faculty above to see their classes on this date.</div>';
+    const weekTableEl = document.getElementById('facultyWeekTable');
+    if(weekTableEl) weekTableEl.innerHTML = '';
+    return;
+  }
+  updateFacultyWeekTable(selected);
+
+  const mine = (entries || [])
+    .filter(e => e.type === 'class' && matchesTeacher(e.teacher, selected))
+    .sort((a,b) => timeStartMinutes(a.time) - timeStartMinutes(b.time));
+
+  const isToday = currentDateStr === fmtDate(new Date());
+  const liveEntry = isToday ? mine.find(e => isLiveNow(e.time)) : null;
+
+  const heading = document.createElement('div');
+  heading.className = 'result-heading';
+  heading.innerHTML = '<h2>'+facultyDisplayName(selected)+' — '+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</h2>' +
+    '<span class="count-pill">'+mine.length+' class'+(mine.length===1?'':'es')+'</span>';
+
+  facultyResult.innerHTML = '';
+  facultyResult.appendChild(heading);
+
+  if(isToday){
+    const status = document.createElement('div');
+    if(liveEntry){
+      status.className = 'live-status live-status-on';
+      status.innerHTML = '<span class="live-dot"></span> <b>'+facultyDisplayName(selected)+' is currently in class</b> — ' +
+        (liveEntry.course||'') + formatSectionSuffix(liveEntry.course, liveEntry.section) +
+        ' · Room ' + liveEntry.room + ' · ' + liveEntry.time;
+    } else {
+      status.className = 'live-status live-status-off';
+      status.innerHTML = '<span class="live-dot"></span> ' + facultyDisplayName(selected) + ' is not in a scheduled class right now.';
+    }
+    facultyResult.appendChild(status);
+  }
+
+  if(mine.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty-note';
+    empty.textContent = 'This faculty has no classes scheduled on this date.';
+    facultyResult.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'class-list';
+  mine.forEach(e => {
+    const live = liveEntry && liveEntry.time === e.time && liveEntry.room === e.room;
+    const card = document.createElement('div');
+    card.className = 'class-card' + (e.origin === 'date' ? ' origin-date' : (e.origin === 'weekly' ? ' origin-weekly' : '')) + (live ? ' is-live' : '');
+    const originNote = e.origin === 'date' ? ' · one-off change (this date only)' : (e.origin === 'weekly' ? ' · recurring weekly change' : '');
+    card.innerHTML = '<div class="time-block">'+e.time+(live ? ' <span class="live-badge">LIVE NOW</span>' : '')+'</div>' +
+      '<div class="details">' +
+        '<div class="course-line">'+(e.course||'')+formatSectionSuffix(e.course, e.section)+'</div>' +
+        '<div class="meta-line">'+(e.group ? e.group+' · ' : '')+'Room '+e.room+originNote+'</div>' +
+      '</div>' +
+      '<div class="room-tag">'+e.room+'</div>';
+    list.appendChild(card);
+  });
+  facultyResult.appendChild(list);
+}
+
+
+// ---- Import from Word file ----
+const sourceLine = document.getElementById('sourceLine');
+const roomsLine = document.getElementById('roomsLine');
+
+function updateSourceLine(meta){
+  if(meta && meta.fileName){
+    const d = new Date(meta.importedAt);
+    const dstr = isNaN(d) ? '' : (' · ' + d.toLocaleDateString());
+    sourceLine.innerHTML = 'Routine source: imported from <b>'+meta.fileName+'</b>'+dstr+
+      ' · <a href="#" id="resetSourceLink" style="color:var(--navy);">reset to built-in sample</a>';
+    const link = document.getElementById('resetSourceLink');
+    if(link){
+      link.onclick = async (ev) => {
+        ev.preventDefault();
+        try{ await appStorage.delete('importedSchedule', false); }catch(e){ /* nothing saved */ }
+        location.reload();
+      };
+    }
+  } else {
+    sourceLine.textContent = 'Routine source: Fall Semester 2026 routine';
+  }
+  roomsLine.textContent = 'Rooms: ' + ROOMS.join(', ');
+}
+
+// ---- Semester / Year selector ----
+const subLine = document.querySelector('.masthead-left .sub');
+const semesterSelect = document.getElementById('semesterSelect');
+const yearSelect = document.getElementById('yearSelect');
+const applySemesterBtn = document.getElementById('applySemesterBtn');
+let currentSemester = "Fall";
+let currentYear = 2026;
+
+(function populateYearOptions(){
+  const startYear = today.getFullYear() - 2;
+  const endYear = today.getFullYear() + 5;
+  let opts = '';
+  for(let y = startYear; y <= endYear; y++){
+    opts += '<option value="'+y+'">'+y+'</option>';
+  }
+  yearSelect.innerHTML = opts;
+})();
+
+function semesterLabel(){
+  return currentSemester + ' ' + currentYear;
+}
+
+function updateSubLine(){
+  subLine.textContent = 'LLB (Hons.) & LLM (Final), ' + semesterLabel();
+}
+
+async function loadSemesterInfo(){
+  try{
+    const res = await appStorage.get('semesterInfo', false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      if(parsed.semester){ currentSemester = parsed.semester; }
+      if(parsed.year){ currentYear = parsed.year; }
+    }
+  }catch(e){ /* nothing saved yet — keep defaults */ }
+  semesterSelect.value = currentSemester;
+  yearSelect.value = String(currentYear);
+  updateSubLine();
+}
+
+applySemesterBtn.onclick = async () => {
+  currentSemester = semesterSelect.value;
+  currentYear = Number(yearSelect.value);
+  updateSubLine();
+  applySemesterBtn.disabled = true;
+  const originalText = applySemesterBtn.textContent;
+  applySemesterBtn.textContent = 'Saving…';
+  try{
+    await appStorage.set('semesterInfo', JSON.stringify({ semester: currentSemester, year: currentYear }), false);
+  }catch(e){ /* still applied for this session even if saving failed */ }
+  applySemesterBtn.disabled = false;
+  applySemesterBtn.textContent = originalText;
+};
+
+function decodeFileBuffer(buf){
+  const bytes = new Uint8Array(buf);
+  if(bytes.length>=2 && bytes[0]===0xFF && bytes[1]===0xFE){
+    return new TextDecoder('utf-16le').decode(bytes.slice(2));
+  }
+  if(bytes.length>=2 && bytes[0]===0xFE && bytes[1]===0xFF){
+    return new TextDecoder('utf-16be').decode(bytes.slice(2));
+  }
+  if(bytes.length>=3 && bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){
+    return new TextDecoder('utf-8').decode(bytes.slice(3));
+  }
+  if(bytes.length>=4 && bytes[0]===0x50 && bytes[1]===0x4B && bytes[2]===0x03 && bytes[3]===0x04){
+    throw new Error('This looks like a real .docx (zip) file, not a Word "web page" export. In Word, use File → Save As → Web Page or Filtered Web Page (.htm), then upload that file.');
+  }
+  let nullCount = 0;
+  const sampleLen = Math.min(bytes.length, 4000);
+  for(let i=1; i<sampleLen; i+=2){ if(bytes[i]===0) nullCount++; }
+  if(nullCount > sampleLen*0.3){
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+const IMPORT_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function normalizeCode(s){ return s.replace(/\s+/g,''); }
+
+// Extracts {section, course, teacher} from a single routine-cell's raw text.
+// Supports two input formats, so newly imported faculty codes are always
+// picked up automatically:
+//   1) "Section,Course;Teacher"   — explicit semicolon before the teacher code
+//   2) "Section,CourseTEACHER"    — teacher is the last 3-4 uppercase letters
+//                                    glued directly onto the end of the course
+//                                    code, with no separator (e.g. "LLB434.1DMG").
+function parseCellEntry(raw){
+  const semi = raw.lastIndexOf(';');
+  if(semi > -1){
+    const teacher = raw.slice(semi+1).trim();
+    const rest = raw.slice(0, semi);
+    const comma = rest.indexOf(',');
+    if(comma > -1 && teacher){
+      return { section: normalizeCode(rest.slice(0, comma)), course: normalizeCode(rest.slice(comma+1)), teacher: normalizeCode(teacher) };
+    }
+    return null;
+  }
+  const comma = raw.indexOf(',');
+  if(comma === -1) return null;
+  const section = normalizeCode(raw.slice(0, comma));
+  const rest = normalizeCode(raw.slice(comma+1));
+  // Trailing 3-4 uppercase letters, immediately after a digit or a dot, are read as the faculty initials.
+  const m = rest.match(/^(.*\d)([A-Z]{3,4})$/);
+  if(!m) return null;
+  return { section, course: m[1], teacher: m[2] };
+}
+
+function findHeadingFor(table){
+  let node = table.previousElementSibling;
+  let hops = 0;
+  while(node && hops < 6){
+    const t = (node.textContent || '').replace(/\u00a0/g,' ').trim();
+    if(t) return t;
+    node = node.previousElementSibling;
+    hops++;
+  }
+  let anc = table.parentElement;
+  let hops2 = 0;
+  while(anc && hops2 < 4){
+    let sib = anc.previousElementSibling;
+    while(sib){
+      const t = (sib.textContent || '').replace(/\u00a0/g,' ').trim();
+      if(t) return t;
+      sib = sib.previousElementSibling;
+    }
+    anc = anc.parentElement;
+    hops2++;
+  }
+  return '';
+}
+
+async function parseRoutineDocx(arrayBuffer, fileName){
+  if(typeof JSZip === 'undefined') throw new Error('DOCX reader is not available. Please check your internet connection and reload the HTML file.');
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const entry = zip.file('word/document.xml');
+  if(!entry) throw new Error('Invalid DOCX file: word/document.xml was not found.');
+  const xmlText = await entry.async('text');
+  const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if(xml.querySelector('parsererror')) throw new Error('Could not parse the Word document XML.');
+  const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const body = xml.getElementsByTagNameNS(W,'body')[0];
+  if(!body) throw new Error('No Word document body found.');
+
+  const schedule={}, roomsByDayProgram={}, allRooms=new Set(), warnings=[];
+  let parsedBlocks=0, parsedEntries=0, currentHeading='';
+  const IMPORT_DAY_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const children=Array.from(body.children);
+  const textOf = el => Array.from(el.getElementsByTagNameNS(W,'t')).map(n=>n.textContent||'').join('').replace(/\s+/g,' ').trim();
+  const isTable = el => el.localName==='tbl';
+  const isParagraph = el => el.localName==='p';
+
+  for(const node of children){
+    if(isParagraph(node)){
+      const txt=textOf(node);
+      if(txt) currentHeading=txt;
+      continue;
+    }
+    if(!isTable(node)) continue;
+    const dayMatch=IMPORT_DAY_NAMES.find(d=>new RegExp('\\b'+d+'\\b','i').test(currentHeading));
+    if(!dayMatch){ warnings.push('Skipped a table because no weekday heading was found immediately above it.'); continue; }
+    const program=/LLM/i.test(currentHeading)?'LLM':'LLB';
+    const rows=Array.from(node.getElementsByTagNameNS(W,'tr'));
+    if(rows.length<2){ warnings.push('Skipped the '+dayMatch+' ('+program+') table — too few rows.'); continue; }
+    const rowCells=r=>Array.from(r.children).filter(x=>x.localName==='tc');
+    const header=rowCells(rows[0]).map(textOf);
+    const times=header.slice(1).filter(t=>/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(t)).map(t=>t.replace(/\s+/g,''));
+    if(!times.length){ warnings.push('Skipped the '+dayMatch+' ('+program+') table — no time columns recognized.'); continue; }
+    if(!schedule[dayMatch]) schedule[dayMatch]=[];
+    if(!roomsByDayProgram[dayMatch]) roomsByDayProgram[dayMatch]={LLB:new Set(),LLM:new Set()};
+    let had=false;
+    for(let r=1;r<rows.length;r++){
+      const cells=rowCells(rows[r]); if(!cells.length) continue;
+      const room=textOf(cells[0]); if(!room) continue;
+      allRooms.add(room); roomsByDayProgram[dayMatch][program].add(room);
+      for(let c=1;c<cells.length && c<=times.length;c++){
+        const raw=textOf(cells[c]); if(!raw) continue;
+        const time=times[c-1]; let entry=null;
+        const parsed=parseCellEntry(raw);
+        if(parsed) entry={time,room,type:'class',section:parsed.section,course:parsed.course,teacher:parsed.teacher};
+        if(!entry) entry={time,room,type:'label',label:raw};
+        if(dayMatch==='Friday'||dayMatch==='Saturday') entry.group=program;
+        schedule[dayMatch].push(entry); parsedEntries++; had=true;
+      }
+    }
+    if(had) parsedBlocks++;
+  }
+  if(!parsedBlocks) throw new Error('Could not find any recognizable Room × Time routine tables in this DOCX file.');
+  const dualDayConfig={};
+  Object.keys(roomsByDayProgram).forEach(day=>{
+    const llb=Array.from(roomsByDayProgram[day].LLB).sort((a,b)=>Number(a)-Number(b));
+    const llm=Array.from(roomsByDayProgram[day].LLM).sort((a,b)=>Number(a)-Number(b));
+    if(llb.length&&llm.length) dualDayConfig[day]={llbRooms:llb,llmRooms:llm};
+  });
+  return {schedule,rooms:Array.from(allRooms).sort((a,b)=>Number(a)-Number(b)),dualDayConfig,warnings,parsedBlocks,parsedEntries,fileName};
+}
+
+function parseRoutineHtml(htmlText, fileName){
+  const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+  const tables = Array.from(doc.querySelectorAll('table'));
+  if(tables.length === 0) throw new Error('No tables found in this file.');
+
+  const schedule = {};
+  const roomsByDayProgram = {};
+  const warnings = [];
+  const allRooms = new Set();
+  let parsedBlocks = 0, parsedEntries = 0;
+
+  tables.forEach(table => {
+    const heading = findHeadingFor(table);
+    const dayMatch = IMPORT_DAY_NAMES.find(d => heading.includes(d));
+    if(!dayMatch){
+      warnings.push('Skipped a table — no weekday heading found above it (nearby text: "'+heading.slice(0,50)+'").');
+      return;
+    }
+    const program = /LLM/i.test(heading) ? 'LLM' : 'LLB';
+
+    const rows = Array.from(table.querySelectorAll('tr'));
+    if(rows.length < 2){ warnings.push('Skipped the '+dayMatch+' ('+program+') table — too few rows.'); return; }
+
+    const headerCells = Array.from(rows[0].querySelectorAll('th,td')).map(c => (c.textContent||'').replace(/\u00a0/g,' ').trim());
+    const times = headerCells.slice(1)
+      .filter(t => /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(t))
+      .map(t => t.replace(/\s+/g,''));
+    if(times.length === 0){ warnings.push('Skipped the '+dayMatch+' ('+program+') table — no time columns recognized.'); return; }
+
+    if(!schedule[dayMatch]) schedule[dayMatch] = [];
+    if(!roomsByDayProgram[dayMatch]) roomsByDayProgram[dayMatch] = { LLB: new Set(), LLM: new Set() };
+
+    let blockHadEntries = false;
+    for(let r=1; r<rows.length; r++){
+      const cells = Array.from(rows[r].querySelectorAll('td'));
+      if(cells.length === 0) continue;
+      const room = (cells[0].textContent||'').replace(/\u00a0/g,' ').trim();
+      if(!room) continue;
+      allRooms.add(room);
+      roomsByDayProgram[dayMatch][program].add(room);
+
+      for(let c=1; c<cells.length && (c-1)<times.length; c++){
+        const raw = (cells[c].textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+        if(!raw) continue;
+        const time = times[c-1];
+        let entry = null;
+        const parsed = parseCellEntry(raw);
+        if(parsed){
+          entry = { time, room, type: 'class', section: parsed.section, course: parsed.course, teacher: parsed.teacher };
+        }
+        if(!entry){
+          entry = { time, room, type: 'label', label: raw };
+        }
+        if(dayMatch === 'Friday' || dayMatch === 'Saturday'){ entry.group = program; }
+        schedule[dayMatch].push(entry);
+        parsedEntries++;
+        blockHadEntries = true;
+      }
+    }
+    if(blockHadEntries) parsedBlocks++;
+  });
+
+  if(parsedBlocks === 0){
+    throw new Error('Could not find any recognizable Room × Time routine tables in this file.');
+  }
+
+  const dualDayConfig = {};
+  Object.keys(roomsByDayProgram).forEach(day => {
+    const llb = Array.from(roomsByDayProgram[day].LLB);
+    const llm = Array.from(roomsByDayProgram[day].LLM);
+    if(llb.length && llm.length){ dualDayConfig[day] = { llbRooms: llb, llmRooms: llm }; }
+  });
+
+  return {
+    schedule, rooms: Array.from(allRooms).sort(), dualDayConfig,
+    warnings, parsedBlocks, parsedEntries, fileName
+  };
+}
+
+const importOverlay = document.getElementById('importOverlay');
+const importFileInput = document.getElementById('importFileInput');
+const importStatus = document.getElementById('importStatus');
+const importSummary = document.getElementById('importSummary');
+const confirmImportBtn = document.getElementById('confirmImportBtn');
+let pendingImport = null;
+
+document.getElementById('importBtn').onclick = () => {
+  importFileInput.value = '';
+  importStatus.textContent = '';
+  importSummary.style.display = 'none';
+  importSummary.innerHTML = '';
+  confirmImportBtn.disabled = true;
+  confirmImportBtn.textContent = 'Import & replace routine';
+  pendingImport = null;
+  importOverlay.classList.add('show');
+};
+document.getElementById('cancelImportBtn').onclick = () => importOverlay.classList.remove('show');
+
+importFileInput.addEventListener('change', () => {
+  const file = importFileInput.files[0];
+  if(!file) return;
+  importStatus.textContent = 'Reading file…';
+  confirmImportBtn.disabled = true;
+  importSummary.style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try{
+      const isDocx = /\.docx$/i.test(file.name) || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      const result = isDocx ? await parseRoutineDocx(reader.result, file.name) : parseRoutineHtml(decodeFileBuffer(reader.result), file.name);
+      pendingImport = result;
+      const dayList = Object.keys(result.schedule);
+      let html = '<b>'+result.parsedBlocks+'</b> day/program table(s) parsed · <b>'+result.parsedEntries+'</b> cell entries found<br>' +
+        'Days: ' + dayList.join(', ') + '<br>Rooms: ' + result.rooms.join(', ');
+      if(result.warnings.length){
+        html += '<br><br><span style="color:#8b1a1a;font-weight:600;">'+result.warnings.length+' warning(s):</span>' +
+          '<ul style="margin:6px 0 0 18px;padding:0;">' +
+          result.warnings.slice(0,8).map(w => '<li>'+w+'</li>').join('') + '</ul>';
+      }
+      importSummary.innerHTML = html;
+      importSummary.style.display = 'block';
+      importStatus.textContent = 'Review the summary below, then confirm to replace the routine.';
+      confirmImportBtn.disabled = false;
+    }catch(err){
+      importStatus.textContent = 'Could not read this file: ' + err.message;
+      importSummary.style.display = 'none';
+      pendingImport = null;
+    }
+  };
+  reader.onerror = () => { importStatus.textContent = 'Could not read this file.'; };
+  reader.readAsArrayBuffer(file);
+});
+
+confirmImportBtn.onclick = async () => {
+  if(!pendingImport) return;
+  confirmImportBtn.disabled = true;
+  confirmImportBtn.textContent = 'Importing…';
+
+  Object.keys(BASE_SCHEDULE).forEach(k => delete BASE_SCHEDULE[k]);
+  Object.assign(BASE_SCHEDULE, pendingImport.schedule);
+  ROOMS.length = 0; ROOMS.push(...pendingImport.rooms);
+  Object.keys(DUAL_DAY_CONFIG).forEach(k => delete DUAL_DAY_CONFIG[k]);
+  Object.assign(DUAL_DAY_CONFIG, pendingImport.dualDayConfig);
+  rebuildFacultyList();
+
+  const meta = { fileName: pendingImport.fileName, importedAt: new Date().toISOString() };
+  const savePayload = {
+    schedule: pendingImport.schedule, rooms: pendingImport.rooms,
+    dualDayConfig: pendingImport.dualDayConfig, ...meta
+  };
+  try{
+    await appStorage.set('importedSchedule', JSON.stringify(savePayload), false);
+  }catch(e){ /* the import still applies for this session even if saving failed */ }
+
+  updateSourceLine(meta);
+  importOverlay.classList.remove('show');
+  confirmImportBtn.textContent = 'Import & replace routine';
+  await refreshForDate(currentDateStr);
+  render();
+  statusLine.textContent = 'Imported "'+pendingImport.fileName+'" — weekly routine replaced (' +
+    pendingImport.parsedEntries + ' entries across ' + Object.keys(pendingImport.schedule).length + ' day(s)).';
+  pendingImport = null;
+};
+
+// ---- Live-now helpers ----
+function isViewingToday(){ return currentDateStr === fmtDate(new Date()); }
+function nowMinutes(){ const n = new Date(); return n.getHours()*60 + n.getMinutes(); }
+function isEntryLiveNow(entry){
+  if(!isViewingToday()) return false;
+  if(entry.type === 'label') return false;
+  const nm = nowMinutes();
+  return nm >= timeStartMinutes(entry.time) && nm < timeEndMinutes(entry.time);
+}
+
+const liveNowPanel = null;
+
+function buildGrid(container, roomsList, entries, dayKey, heading){
+  const byCell = {};
+  entries.forEach(e => { byCell[cellKey(e.time, e.room)] = e; });
+  const timeSet = new Set(entries.map(e => e.time));
+  const times = Array.from(timeSet).sort((a,b) => timeStartMinutes(a)-timeStartMinutes(b));
+
+  let busyCount = 0, freeCount = 0;
+
+  if(heading){
+    const h = document.createElement('div');
+    h.className = 'grid-heading';
+    h.textContent = heading;
+    container.appendChild(h);
+  }
+
+  if(times.length === 0){
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'There are no classes scheduled here on this day in the weekly routine.';
+    container.appendChild(note);
+    return { busyCount, freeCount };
+  }
+
+  const table = document.createElement('table');
+  table.className = 'grid';
+  const thead = document.createElement('thead');
+  const trGroup = document.createElement('tr');
+  trGroup.innerHTML = '<th class="time-col" rowspan="2">Room No.</th>' +
+    '<th class="room-group-col" colspan="'+times.length+'">Time</th>';
+  thead.appendChild(trGroup);
+  const trh = document.createElement('tr');
+  trh.innerHTML = times.map(t => '<th>'+t+'</th>').join('');
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  roomsList.forEach(room => {
+    const tr = document.createElement('tr');
+    const tdRoom = document.createElement('td');
+    tdRoom.className = 'time-col';
+    tdRoom.textContent = room;
+    tr.appendChild(tdRoom);
+
+    times.forEach(time => {
+      const td = document.createElement('td');
+      td.className = 'room-cell';
+      const entry = byCell[cellKey(time, room)];
+
+      if(entry){
+        busyCount++;
+        const isDateOnly = entry.origin === 'date';
+        if(entry.type === 'label'){
+          const wrap = document.createElement('div');
+          wrap.className = isDateOnly ? 'cell-label cell-label-date' : 'cell-label';
+          wrap.innerHTML = '<span>'+labelText(entry.label)+'</span>';
+          const actions = document.createElement('div');
+          actions.className = 'cell-actions';
+          const delBtn = document.createElement('button');
+          delBtn.title = 'Delete';
+          delBtn.textContent = '×';
+          delBtn.onclick = () => openDelete(time, room, entry, dayKey);
+          actions.appendChild(delBtn);
+          wrap.appendChild(actions);
+          td.appendChild(wrap);
+        } else {
+          const wrap = document.createElement('div');
+          const live = isEntryLiveNow(entry);
+          wrap.className = (isDateOnly ? 'cell-busy cell-busy-date' : 'cell-busy') + (live ? ' cell-live' : '');
+          const secText = entry.section ? entry.section : '';
+          const courseText = entry.course ? entry.course : (entry.raw || '');
+          const teacherText = entry.teacher ? entry.teacher : '';
+          wrap.innerHTML =
+            (live ? '<div class="cell-live-badge"><span class="live-cell-dot"></span>LIVE</div>' : '') +
+            '<div class="sec">'+secText+'</div>' +
+            '<div class="course">'+courseText+'</div>' +
+            (teacherText ? '<div class="teacher">'+teacherText+'</div>' : '');
+          const actions = document.createElement('div');
+          actions.className = 'cell-actions';
+          const editBtn = document.createElement('button');
+          editBtn.title = 'Edit';
+          editBtn.textContent = '✎';
+          editBtn.onclick = () => openEdit(time, room, entry, dayKey);
+          actions.appendChild(editBtn);
+          const delBtn = document.createElement('button');
+          delBtn.title = 'Delete';
+          delBtn.textContent = '×';
+          delBtn.onclick = () => openDelete(time, room, entry, dayKey);
+          actions.appendChild(delBtn);
+          wrap.appendChild(actions);
+          td.appendChild(wrap);
+        }
+      } else {
+        freeCount++;
+        const btn = document.createElement('button');
+        btn.className = 'add-btn';
+        btn.innerHTML = '+<span class="lbl">Add class</span>';
+        btn.onclick = () => openAdd(time, room, dayKey);
+        td.appendChild(btn);
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  return { busyCount, freeCount };
+}
+
+function render(){
+  gridWrap.innerHTML = '';
+  statusLine.textContent = '';
+  const { dayKey, entries } = getEffectiveEntries(currentDateStr);
+  dayChip.textContent = DAY_NAME[dayKey] + ' · ' + formatDisplayDate(currentDateStr);
+  renderFacultyView(entries);
+
+  const dualConfig = DUAL_DAY_CONFIG[dayKey];
+  if(dualConfig){
+    const llbEntries = entries.filter(e => dualConfig.llbRooms.includes(e.room));
+    const llmEntries = entries.filter(e => dualConfig.llmRooms.includes(e.room));
+
+    const wrapLLB = document.createElement('div');
+    wrapLLB.className = 'grid-block';
+    const r1 = buildGrid(wrapLLB, dualConfig.llbRooms, llbEntries, dayKey, dayKey+' (LLB)');
+    gridWrap.appendChild(wrapLLB);
+
+    const wrapLLM = document.createElement('div');
+    wrapLLM.className = 'grid-block';
+    const r2 = buildGrid(wrapLLM, dualConfig.llmRooms, llmEntries, dayKey, dayKey+' (LLM)');
+    gridWrap.appendChild(wrapLLM);
+
+    const busyCount = r1.busyCount + r2.busyCount;
+    const freeCount = r1.freeCount + r2.freeCount;
+    statusLine.textContent = busyCount+' room-slots occupied · '+freeCount+' free (across both tables)';
+    return;
+  }
+
+  const timeSet = new Set(entries.map(e => e.time));
+  if(timeSet.size === 0){
+    gridWrap.innerHTML = '<div class="empty-note">There are no classes scheduled on this day in the weekly routine.</div>';
+    return;
+  }
+
+  const result = buildGrid(gridWrap, ROOMS, entries, dayKey, null);
+  const times = Array.from(timeSet);
+  statusLine.textContent = times.length+' time slots today · '+result.busyCount+' room-slots occupied · '+result.freeCount+' free';
+}
+
+// ---- Add flow ----
+const addOverlay = document.getElementById('addOverlay');
+const addMeta = document.getElementById('addMeta');
+const inSection = document.getElementById('inSection');
+const inCourse = document.getElementById('inCourse');
+const inTeacher = document.getElementById('inTeacher');
+const addScopeDateLabel = document.getElementById('addScopeDateLabel');
+const addScopeWeekdayLabel = document.getElementById('addScopeWeekdayLabel');
+
+function openAdd(time, room, dayKey){
+  pendingAdd = { time, room, dayKey };
+  addMeta.innerHTML = '<b>'+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</b> · Room '+room+' · '+time;
+  addScopeDateLabel.textContent = '('+formatDisplayDate(currentDateStr)+')';
+  addScopeWeekdayLabel.textContent = DAY_NAME[dayKey];
+  inSection.value=''; inCourse.value=''; inTeacher.value='';
+  document.querySelector('input[name="addScope"][value="date"]').checked = true;
+  addOverlay.classList.add('show');
+  inSection.focus();
+}
+document.getElementById('cancelAddBtn').onclick = () => addOverlay.classList.remove('show');
+document.getElementById('confirmAddBtn').onclick = async () => {
+  if(!pendingAdd) return;
+  const section = inSection.value.trim();
+  const course = inCourse.value.trim();
+  const teacher = inTeacher.value.trim();
+  if(!section && !course){
+    statusLine.textContent = 'Enter at least a section or a course code.';
+    return;
+  }
+  const scope = document.querySelector('input[name="addScope"]:checked').value;
+  const newEntry = { time: pendingAdd.time, room: pendingAdd.room, type:'class', section, course, teacher };
+  if(scope === 'weekly'){
+    currentWeekly.added.push(newEntry);
+    await saveWeekly(pendingAdd.dayKey, currentWeekly);
+  } else {
+    currentOverride.added.push(newEntry);
+    await saveOverride(currentDateStr, currentOverride);
+  }
+  addOverlay.classList.remove('show');
+  pendingAdd = null;
+  render();
+};
+
+// ---- Delete flow ----
+const delOverlay = document.getElementById('delOverlay');
+const delMeta = document.getElementById('delMeta');
+const delScopeField = document.getElementById('delScopeField');
+const delScopeWeekdayLabel = document.getElementById('delScopeWeekdayLabel');
+
+function openDelete(time, room, entry, dayKey){
+  pendingDel = { time, room, entry, dayKey };
+  const desc = entry.type === 'label' ? labelText(entry.label) :
+    [entry.section, entry.course, entry.teacher].filter(Boolean).join(' · ');
+  delMeta.innerHTML = '<b>'+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</b> · Room '+room+' · '+time+'<br>'+desc;
+  if(entry.origin === 'date'){
+    delScopeField.style.display = 'none';
+  } else {
+    delScopeField.style.display = 'block';
+    delScopeWeekdayLabel.textContent = DAY_NAME[dayKey];
+    document.querySelector('input[name="delScope"][value="date"]').checked = true;
+  }
+  delOverlay.classList.add('show');
+}
+document.getElementById('cancelDelBtn').onclick = () => delOverlay.classList.remove('show');
+document.getElementById('confirmDelBtn').onclick = async () => {
+  if(!pendingDel) return;
+  const { time, room, entry, dayKey } = pendingDel;
+  const scope = entry.origin === 'date' ? 'date' :
+    document.querySelector('input[name="delScope"]:checked').value;
+
+  if(entry.origin === 'date'){
+    currentOverride.added = currentOverride.added.filter(e => !(e.time===time && e.room===room));
+    await saveOverride(currentDateStr, currentOverride);
+  } else if(entry.origin === 'weekly'){
+    if(scope === 'weekly'){
+      currentWeekly.added = currentWeekly.added.filter(e => !(e.time===time && e.room===room));
+      await saveWeekly(dayKey, currentWeekly);
+    } else {
+      currentOverride.removed.push(cellKey(time, room));
+      await saveOverride(currentDateStr, currentOverride);
+    }
+  } else { // origin === 'base'
+    if(scope === 'weekly'){
+      currentWeekly.removed.push(cellKey(time, room));
+      await saveWeekly(dayKey, currentWeekly);
+    } else {
+      currentOverride.removed.push(cellKey(time, room));
+      await saveOverride(currentDateStr, currentOverride);
+    }
+  }
+  delOverlay.classList.remove('show');
+  pendingDel = null;
+  render();
+};
+
+// ---- Edit flow ----
+const editOverlay = document.getElementById('editOverlay');
+const editMeta = document.getElementById('editMeta');
+const edSection = document.getElementById('edSection');
+const edCourse = document.getElementById('edCourse');
+const edTeacher = document.getElementById('edTeacher');
+const editScopeField = document.getElementById('editScopeField');
+const editScopeDateLabel = document.getElementById('editScopeDateLabel');
+const editScopeWeekdayLabel = document.getElementById('editScopeWeekdayLabel');
+let pendingEdit = null;
+
+function openEdit(time, room, entry, dayKey){
+  pendingEdit = { time, room, entry, dayKey };
+  editMeta.innerHTML = '<b>'+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</b> · Room '+room+' · '+time;
+  edSection.value = entry.section || '';
+  edCourse.value = entry.course || '';
+  edTeacher.value = entry.teacher || '';
+  if(entry.origin === 'date'){
+    editScopeField.style.display = 'none';
+  } else {
+    editScopeField.style.display = 'block';
+    editScopeDateLabel.textContent = '('+formatDisplayDate(currentDateStr)+')';
+    editScopeWeekdayLabel.textContent = DAY_NAME[dayKey];
+    document.querySelector('input[name="editScope"][value="date"]').checked = true;
+  }
+  editOverlay.classList.add('show');
+  edSection.focus();
+}
+document.getElementById('cancelEditBtn').onclick = () => editOverlay.classList.remove('show');
+document.getElementById('confirmEditBtn').onclick = async () => {
+  if(!pendingEdit) return;
+  const { time, room, entry, dayKey } = pendingEdit;
+  const section = edSection.value.trim();
+  const course = edCourse.value.trim();
+  const teacher = edTeacher.value.trim();
+  if(!section && !course){
+    statusLine.textContent = 'Enter at least a section or a course code.';
+    return;
+  }
+  const updated = { time, room, type:'class', section, course, teacher };
+  const scope = entry.origin === 'date' ? 'date' :
+    document.querySelector('input[name="editScope"]:checked').value;
+
+  if(entry.origin === 'date'){
+    currentOverride.added = currentOverride.added.map(e =>
+      (e.time===time && e.room===room) ? updated : e);
+    await saveOverride(currentDateStr, currentOverride);
+  } else if(entry.origin === 'weekly'){
+    if(scope === 'weekly'){
+      currentWeekly.added = currentWeekly.added.map(e =>
+        (e.time===time && e.room===room) ? updated : e);
+      await saveWeekly(dayKey, currentWeekly);
+    } else {
+      currentOverride.removed.push(cellKey(time, room));
+      currentOverride.added.push(updated);
+      await saveOverride(currentDateStr, currentOverride);
+    }
+  } else { // origin === 'base'
+    if(scope === 'weekly'){
+      currentWeekly.removed.push(cellKey(time, room));
+      currentWeekly.added.push(updated);
+      await saveWeekly(dayKey, currentWeekly);
+    } else {
+      currentOverride.removed.push(cellKey(time, room));
+      currentOverride.added.push(updated);
+      await saveOverride(currentDateStr, currentOverride);
+    }
+  }
+  editOverlay.classList.remove('show');
+  pendingEdit = null;
+  render();
+};
+
+// ---- Print ----
+const printRangeOverlay = document.getElementById('printRangeOverlay');
+const printFrom = document.getElementById('printFrom');
+const printTo = document.getElementById('printTo');
+const printArea = document.getElementById('printArea');
+
+printFrom.min = fmtDate(today);
+printFrom.max = fmtDate(maxDate);
+printTo.min = fmtDate(today);
+printTo.max = fmtDate(maxDate);
+
+const genFrom = document.getElementById('genFrom');
+const genTo = document.getElementById('genTo');
+genFrom.min = fmtDate(today);
+genFrom.max = fmtDate(maxDate);
+genTo.min = fmtDate(today);
+genTo.max = fmtDate(maxDate);
+
+document.getElementById('printBtn').onclick = () => {
+  printFrom.value = currentDateStr;
+  printTo.value = currentDateStr;
+  printRangeOverlay.classList.add('show');
+};
+document.getElementById('cancelPrintBtn').onclick = () => printRangeOverlay.classList.remove('show');
+
+document.getElementById('confirmPrintBtn').onclick = async () => {
+  const fromStr = printFrom.value;
+  const toStr = printTo.value;
+  if(!fromStr || !toStr){ return; }
+  const fromD = parseDateStr(fromStr);
+  const toD = parseDateStr(toStr);
+  if(fromD > toD){
+    alert('The "From date" must be on or before the "To date".');
+    return;
+  }
+
+  printArea.innerHTML = '';
+  const mast = document.createElement('div');
+  mast.className = 'print-masthead';
+  mast.innerHTML = '<div class="print-uni">Southeast University</div>' +
+    '<div class="print-title">Class Routine — Department of Law, ' + semesterLabel() + '</div>';
+  printArea.appendChild(mast);
+
+  const cursor = new Date(fromD);
+  while(cursor <= toD){
+    const dStr = fmtDate(cursor);
+    const dow = DAY_KEYS[cursor.getDay()];
+
+    const dateOverride = await loadOverride(dStr);
+    const weekly = await loadWeekly(dow);
+
+    const base = (BASE_SCHEDULE[dow] || []).map(e => ({...e, origin:'base'}));
+    const weeklyRemovedSet = new Set(weekly.removed);
+    const afterWeeklyRemoved = base.filter(e => !weeklyRemovedSet.has(cellKey(e.time, e.room)));
+    const weeklyAdded = weekly.added.map(e => ({...e, type: e.type || 'class', origin:'weekly'}));
+    const afterWeekly = afterWeeklyRemoved.concat(weeklyAdded);
+    const dateRemovedSet = new Set(dateOverride.removed);
+    const afterDateRemoved = afterWeekly.filter(e => !dateRemovedSet.has(cellKey(e.time, e.room)));
+    const dateAdded = dateOverride.added.map(e => ({...e, type: e.type || 'class', origin:'date'}));
+    const entries = afterDateRemoved.concat(dateAdded);
+
+    const section = document.createElement('div');
+    section.className = 'print-day-section';
+    const heading = document.createElement('div');
+    heading.className = 'print-day-heading';
+    heading.textContent = DAY_NAME[dow] + ', ' + formatDisplayDate(dStr);
+    section.appendChild(heading);
+
+    const dualConfig = DUAL_DAY_CONFIG[dow];
+    if(dualConfig){
+      const llbEntries = entries.filter(e => dualConfig.llbRooms.includes(e.room));
+      const llmEntries = entries.filter(e => dualConfig.llmRooms.includes(e.room));
+      const wrapLLB = document.createElement('div');
+      wrapLLB.className = 'grid-block';
+      buildGrid(wrapLLB, dualConfig.llbRooms, llbEntries, dow, dow+' (LLB)');
+      section.appendChild(wrapLLB);
+      const wrapLLM = document.createElement('div');
+      wrapLLM.className = 'grid-block';
+      buildGrid(wrapLLM, dualConfig.llmRooms, llmEntries, dow, dow+' (LLM)');
+      section.appendChild(wrapLLM);
+    } else {
+      const wrap = document.createElement('div');
+      wrap.className = 'grid-block';
+      if(entries.length === 0){
+        const note = document.createElement('div');
+        note.className = 'empty-note';
+        note.textContent = 'There are no classes scheduled on this day in the weekly routine.';
+        wrap.appendChild(note);
+      } else {
+        buildGrid(wrap, ROOMS, entries, dow, null);
+      }
+      section.appendChild(wrap);
+    }
+
+    printArea.appendChild(section);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  printRangeOverlay.classList.remove('show');
+  setTimeout(() => window.print(), 100);
+};
+
+// ---- Clear all data ----
+const clearOverlay = document.getElementById('clearOverlay');
+document.getElementById('clearBtn').onclick = () => clearOverlay.classList.add('show');
+document.getElementById('cancelClearBtn').onclick = () => clearOverlay.classList.remove('show');
+document.getElementById('confirmClearBtn').onclick = async () => {
+  const btn = document.getElementById('confirmClearBtn');
+  btn.disabled = true; btn.textContent = 'Clearing…';
+  try{
+    const overrideKeys = await appStorage.list('override:', false);
+    if(overrideKeys && overrideKeys.keys){
+      for(const k of overrideKeys.keys){ try{ await appStorage.delete(k, false); }catch(e){} }
+    }
+  }catch(e){ /* none saved */ }
+  try{
+    const weeklyKeys = await appStorage.list('weekly:', false);
+    if(weeklyKeys && weeklyKeys.keys){
+      for(const k of weeklyKeys.keys){ try{ await appStorage.delete(k, false); }catch(e){} }
+    }
+  }catch(e){ /* none saved */ }
+  try{ await appStorage.delete('importedSchedule', false); }catch(e){ /* none saved */ }
+  location.reload();
+};
+
+// ---- Generate Word file ----
+const genOverlay = document.getElementById('genOverlay');
+document.getElementById('genBtn').onclick = () => {
+  genFrom.value = currentDateStr;
+  genTo.value = currentDateStr;
+  genOverlay.classList.add('show');
+};
+document.getElementById('cancelGenBtn').onclick = () => genOverlay.classList.remove('show');
+
+function escapeHtml(s){
+  return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildWordTableHtml(roomsList, entries, times){
+  const byCell = {};
+  entries.forEach(e => { byCell[cellKey(e.time, e.room)] = e; });
+  let html = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-family:Calibri,Arial,sans-serif;font-size:10pt;">';
+  html += '<thead><tr>';
+  html += '<td style="background:#F0EAD7;padding:4px;text-align:center;"><b>Room</b></td>';
+  times.forEach(t => { html += '<td style="background:#F0EAD7;padding:4px;text-align:center;"><b>'+escapeHtml(t)+'</b></td>'; });
+  html += '</tr></thead><tbody>';
+  roomsList.forEach(room => {
+    html += '<tr><td style="background:#F0EAD7;padding:4px;text-align:center;"><b>'+escapeHtml(room)+'</b></td>';
+    times.forEach(time => {
+      const e = byCell[cellKey(time, room)];
+      let cell = '';
+      if(e){
+        if(e.type === 'label'){
+          cell = '<i>'+escapeHtml(labelText(e.label))+'</i>';
+        } else {
+          cell = escapeHtml([e.section, e.course].filter(Boolean).join(',')) +
+            (e.teacher ? ';'+escapeHtml(e.teacher) : '');
+        }
+      }
+      html += '<td style="padding:4px;text-align:center;">'+(cell || '&nbsp;')+'</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+document.getElementById('confirmGenBtn').onclick = async () => {
+  const fromStr = genFrom.value;
+  const toStr = genTo.value;
+  if(!fromStr || !toStr) return;
+  const fromD = parseDateStr(fromStr);
+  const toD = parseDateStr(toStr);
+  if(fromD > toD){ alert('The "From date" must be on or before the "To date".'); return; }
+
+  const genBtn = document.getElementById('confirmGenBtn');
+  genBtn.disabled = true; genBtn.textContent = 'Generating…';
+
+  let bodyHtml = '<div style="text-align:center;margin-bottom:20px;">' +
+    '<div style="font-size:26pt;font-weight:bold;letter-spacing:2px;text-transform:uppercase;font-family:&quot;Agency FB&quot;,&quot;Arial Narrow&quot;,sans-serif;">SOUTHEAST UNIVERSITY</div>' +
+    '<div style="font-size:14pt;">Department of Law, ' + escapeHtml(semesterLabel()) + '</div>' +
+    '<div style="font-size:12pt;">Class Routine</div></div>';
+
+  const cursor = new Date(fromD);
+  while(cursor <= toD){
+    const dStr = fmtDate(cursor);
+    const dow = DAY_KEYS[cursor.getDay()];
+    const dateOverride = await loadOverride(dStr);
+    const weekly = await loadWeekly(dow);
+
+    const base = (BASE_SCHEDULE[dow] || []).map(e => ({...e, origin:'base'}));
+    const weeklyRemovedSet = new Set(weekly.removed);
+    const afterWeeklyRemoved = base.filter(e => !weeklyRemovedSet.has(cellKey(e.time, e.room)));
+    const weeklyAdded = weekly.added.map(e => ({...e, type: e.type || 'class', origin:'weekly'}));
+    const afterWeekly = afterWeeklyRemoved.concat(weeklyAdded);
+    const dateRemovedSet = new Set(dateOverride.removed);
+    const afterDateRemoved = afterWeekly.filter(e => !dateRemovedSet.has(cellKey(e.time, e.room)));
+    const dateAdded = dateOverride.added.map(e => ({...e, type: e.type || 'class', origin:'date'}));
+    const entries = afterDateRemoved.concat(dateAdded);
+
+    bodyHtml += '<h3 style="margin-top:24px;">'+DAY_NAME[dow]+' — '+formatDisplayDate(dStr)+'</h3>';
+
+    const dualConfig = DUAL_DAY_CONFIG[dow];
+    if(dualConfig){
+      [['LLB', dualConfig.llbRooms], ['LLM', dualConfig.llmRooms]].forEach(([label, roomsList]) => {
+        const subEntries = entries.filter(e => roomsList.includes(e.room));
+        const times = Array.from(new Set(subEntries.map(e=>e.time))).sort((a,b)=>timeStartMinutes(a)-timeStartMinutes(b));
+        bodyHtml += '<h4>'+DAY_NAME[dow]+' — '+label+'</h4>';
+        if(times.length===0){ bodyHtml += '<p><i>No classes scheduled.</i></p>'; }
+        else { bodyHtml += buildWordTableHtml(roomsList, subEntries, times); }
+      });
+    } else {
+      const times = Array.from(new Set(entries.map(e=>e.time))).sort((a,b)=>timeStartMinutes(a)-timeStartMinutes(b));
+      if(times.length===0){ bodyHtml += '<p><i>No classes scheduled.</i></p>'; }
+      else { bodyHtml += buildWordTableHtml(ROOMS, entries, times); }
+    }
+    cursor.setDate(cursor.getDate()+1);
+  }
+
+  const wordDoc = '<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta charset="utf-8"><title>Class Routine</title></head><body>' + bodyHtml + '</body></html>';
+
+  const blob = new Blob(['\ufeff', wordDoc], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Class_Routine_' + fromStr + '_to_' + toStr + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  genBtn.disabled = false; genBtn.textContent = 'Generate';
+  genOverlay.classList.remove('show');
+};
+
+// ---- Date change ----
+datePick.addEventListener('change', async () => {
+  if(!datePick.value) return;
+  currentDateStr = datePick.value;
+  dateDisplay.textContent = formatLongDate(currentDateStr);
+  gridWrap.innerHTML = '<div class="empty-note">Loading…</div>';
+  await refreshForDate(currentDateStr);
+  render();
+});
+
+// ---- Save current state as a standalone, updated HTML file ----
+// This bakes every change made in this browser (weekly pattern edits, one-off
+// date changes, imported routine, semester label) into a fresh copy of this
+// same page, so it can be downloaded and re-shared as the new "master" file —
+// no browser storage needed on the other end.
+async function collectPrefixedEntries(prefix){
+  const out = {};
+  try{
+    const listRes = await appStorage.list(prefix, false);
+    const keys = (listRes && listRes.keys) || [];
+    for(const k of keys){
+      try{
+        const res = await appStorage.get(k, false);
+        if(res && res.value !== undefined && res.value !== null) out[k] = res.value;
+      }catch(e){ /* skip unreadable key */ }
+    }
+  }catch(e){ /* no keys of this kind */ }
+  return out;
+}
+
+async function buildMergedBaseSchedule(){
+  const merged = {};
+  for(const dayKey of DAY_KEYS){
+    const base = (BASE_SCHEDULE[dayKey] || []).map(e => ({...e}));
+    const weekly = await loadWeekly(dayKey);
+    const removedSet = new Set(weekly.removed || []);
+    const kept = base.filter(e => !removedSet.has(cellKey(e.time, e.room)));
+    const added = (weekly.added || []).map(e => ({...e}));
+    merged[dayKey] = kept.concat(added);
+  }
+  return merged;
+}
+
+function findMainAppScript(){
+  const scripts = Array.from(document.scripts).filter(s => !s.src);
+  return scripts.find(s => s.textContent.indexOf('const BASE_SCHEDULE') !== -1) || null;
+}
+
+async function buildUpdatedHtmlDocument(){
+  const mergedSchedule = await buildMergedBaseSchedule();
+  const dateOverrides = await collectPrefixedEntries('override:');
+
+  const mainScript = findMainAppScript();
+  if(!mainScript){ throw new Error('Could not locate the app script to update.'); }
+
+  const lines = mainScript.textContent.split('\n');
+  const newLines = lines.map(line => {
+    if(line.indexOf('const BASE_SCHEDULE = ') === 0){
+      return 'const BASE_SCHEDULE = ' + JSON.stringify(mergedSchedule) + ';';
+    }
+    if(line.indexOf('const ROOMS = ') === 0){
+      return 'const ROOMS = ' + JSON.stringify(ROOMS) + ';';
+    }
+    if(line.indexOf('const DUAL_DAY_CONFIG = ') === 0){
+      return 'const DUAL_DAY_CONFIG = ' + JSON.stringify(DUAL_DAY_CONFIG) + ';';
+    }
+    if(line.indexOf('let currentSemester = ') === 0){
+      return 'let currentSemester = ' + JSON.stringify(currentSemester) + ';';
+    }
+    if(line.indexOf('let currentYear = ') === 0){
+      return 'let currentYear = ' + JSON.stringify(currentYear) + ';';
+    }
+    if(line.indexOf('const SEED_DATE_OVERRIDES = ') === 0){
+      return 'const SEED_DATE_OVERRIDES = ' + JSON.stringify(dateOverrides) + ';';
+    }
+    return line;
+  });
+  const updatedScriptSrc = newLines.join('\n');
+
+  const docClone = document.documentElement.cloneNode(true);
+  docClone.querySelectorAll('.overlay').forEach(el => el.classList.remove('show'));
+  const cloneScripts = Array.from(docClone.querySelectorAll('script')).filter(s => !s.src);
+  const targetScript = cloneScripts.find(s => s.textContent.indexOf('const BASE_SCHEDULE') !== -1);
+  if(targetScript){ targetScript.textContent = updatedScriptSrc; }
+
+  return '<!DOCTYPE html>\n' + docClone.outerHTML;
+}
+
+async function saveUpdatedHtmlFile(triggerBtn){
+  const originalLabel = triggerBtn ? triggerBtn.textContent : '';
+  if(triggerBtn){ triggerBtn.disabled = true; triggerBtn.textContent = 'Saving…'; }
+  try{
+    const htmlString = await buildUpdatedHtmlDocument();
+
+    if(linkedFileHandle){
+      const wrote = await writeToLinkedFile(htmlString);
+      if(wrote){
+        statusLine.textContent = 'Saved directly to "' + linkedFileHandle.name + '". Reload that file in the browser to see the update.';
+        return;
+      }
+      // writeToLinkedFile already set a status message explaining the fallback.
+    }
+
+    const blob = new Blob([htmlString], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = fmtDate(new Date());
+    a.href = url;
+    a.download = 'SEU_Law_Class_Routine_Updated_' + stamp + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    if(!linkedFileHandle){
+      statusLine.textContent = 'Saved an updated HTML file with all current changes to your Downloads folder.';
+    }
+  }catch(e){
+    statusLine.textContent = 'Could not save the HTML file: ' + e.message;
+  }finally{
+    if(triggerBtn){ triggerBtn.disabled = false; triggerBtn.textContent = originalLabel; }
+  }
+}
+
+// ---- Link this file for direct auto-save (Chrome / Edge — File System Access API) ----
+// Instead of downloading a new copy every time, this lets the browser write the
+// update straight back into the actual .html file on disk, so refreshing that
+// file shows the latest changes. Not supported in Firefox/Safari, which fall
+// back to the regular download above.
+const supportsFileSystemAccess = (typeof window !== 'undefined') && ('showOpenFilePicker' in window);
+let linkedFileHandle = null;
+let pendingRelinkHandle = null;
+
+const FS_IDB_NAME = 'seuLawRoutineFileLink';
+const FS_IDB_STORE = 'handles';
+const FS_IDB_KEY = 'linkedFile';
+
+function fsIdbOpen(){
+  return new Promise((resolve, reject) => {
+    if(typeof indexedDB === 'undefined'){ reject(new Error('IndexedDB unavailable')); return; }
+    const req = indexedDB.open(FS_IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(FS_IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function fsIdbSetHandle(handle){
+  try{
+    const db = await fsIdbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_IDB_STORE, 'readwrite');
+      tx.objectStore(FS_IDB_STORE).put(handle, FS_IDB_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }catch(e){ /* best-effort — direct save this session still works without it */ }
+}
+
+async function fsIdbGetHandle(){
+  try{
+    const db = await fsIdbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_IDB_STORE, 'readonly');
+      const req = tx.objectStore(FS_IDB_STORE).get(FS_IDB_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+
+async function fsIdbClearHandle(){
+  try{
+    const db = await fsIdbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_IDB_STORE, 'readwrite');
+      tx.objectStore(FS_IDB_STORE).delete(FS_IDB_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }catch(e){ /* ignore */ }
+}
+
+function updateLinkStatusUI(){
+  if(!linkStatusLine) return;
+  if(linkedFileHandle){
+    linkStatusLine.textContent = '🔗 Linked to "' + linkedFileHandle.name + '" — Save/Update will write directly into that file. (Unlink)';
+    linkStatusLine.style.color = 'var(--green)';
+  }else if(pendingRelinkHandle){
+    linkStatusLine.textContent = 'Was linked to "' + pendingRelinkHandle.name + '" — click "🔗 Link this file" once to reconnect.';
+    linkStatusLine.style.color = 'var(--muted)';
+  }else if(supportsFileSystemAccess){
+    linkStatusLine.textContent = 'Not linked — Save/Update will download a new copy each time.';
+    linkStatusLine.style.color = 'var(--muted)';
+  }else{
+    linkStatusLine.textContent = 'Direct auto-save needs Chrome or Edge — Save/Update will download a new copy here.';
+    linkStatusLine.style.color = 'var(--muted)';
+  }
+}
+
+async function writeToLinkedFile(htmlString){
+  try{
+    let perm = await linkedFileHandle.queryPermission({ mode: 'readwrite' });
+    if(perm !== 'granted'){ perm = await linkedFileHandle.requestPermission({ mode: 'readwrite' }); }
+    if(perm !== 'granted'){
+      statusLine.textContent = 'Write permission for the linked file was not granted; downloaded a copy instead.';
+      return false;
+    }
+    const writable = await linkedFileHandle.createWritable();
+    await writable.write(htmlString);
+    await writable.close();
+    return true;
+  }catch(e){
+    statusLine.textContent = 'Could not write to the linked file (' + e.message + '); downloaded a copy instead.';
+    return false;
+  }
+}
+
+async function linkFileForAutoSave(){
+  if(!supportsFileSystemAccess){
+    statusLine.textContent = 'Direct auto-save to a linked file needs Chrome or Edge. Use "Save as HTML" to download a copy instead.';
+    return;
+  }
+  try{
+    if(pendingRelinkHandle){
+      const perm = await pendingRelinkHandle.requestPermission({ mode: 'readwrite' });
+      if(perm === 'granted'){
+        linkedFileHandle = pendingRelinkHandle;
+        pendingRelinkHandle = null;
+        updateLinkStatusUI();
+        statusLine.textContent = 'Re-linked to "' + linkedFileHandle.name + '".';
+        return;
+      }
+      pendingRelinkHandle = null;
+    }
+    const [handle] = await window.showOpenFilePicker({
+      multiple: false,
+      types: [{ description: 'HTML file', accept: { 'text/html': ['.html', '.htm'] } }]
+    });
+    const perm = await handle.requestPermission({ mode: 'readwrite' });
+    if(perm !== 'granted'){
+      statusLine.textContent = 'Permission to write to that file was not granted.';
+      return;
+    }
+    linkedFileHandle = handle;
+    await fsIdbSetHandle(handle);
+    updateLinkStatusUI();
+    statusLine.textContent = 'Linked to "' + handle.name + '". Save/Update will now write directly into that file.';
+  }catch(e){
+    if(e && e.name === 'AbortError') return; // user cancelled the picker
+    statusLine.textContent = 'Could not link the file: ' + e.message;
+  }
+}
+
+async function unlinkFile(){
+  linkedFileHandle = null;
+  pendingRelinkHandle = null;
+  await fsIdbClearHandle();
+  updateLinkStatusUI();
+  statusLine.textContent = 'Unlinked. Save/Update will go back to downloading a new copy.';
+}
+
+async function restoreLinkedFileHandle(){
+  if(!supportsFileSystemAccess){ updateLinkStatusUI(); return; }
+  try{
+    const handle = await fsIdbGetHandle();
+    if(handle){
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
+      if(perm === 'granted'){ linkedFileHandle = handle; }
+      else{ pendingRelinkHandle = handle; }
+    }
+  }catch(e){ /* ignore — user can link again manually */ }
+  updateLinkStatusUI();
+}
+
+const saveHtmlBtn = document.getElementById('saveHtmlBtn');
+if(saveHtmlBtn){ saveHtmlBtn.onclick = () => saveUpdatedHtmlFile(saveHtmlBtn); }
+const updateHtmlBtn = document.getElementById('updateHtmlBtn');
+if(updateHtmlBtn){ updateHtmlBtn.onclick = () => saveUpdatedHtmlFile(updateHtmlBtn); }
+const linkFileBtn = document.getElementById('linkFileBtn');
+const linkStatusLine = document.getElementById('linkStatusLine');
+if(linkFileBtn){
+  linkFileBtn.onclick = () => linkFileForAutoSave();
+  if(!supportsFileSystemAccess){ linkFileBtn.style.opacity = '0.55'; }
+}
+if(linkStatusLine){
+  linkStatusLine.style.cursor = 'pointer';
+  linkStatusLine.onclick = () => { if(linkedFileHandle) unlinkFile(); };
+}
+
+// ---- Init ----
+async function loadImportedScheduleIfAny(){
+  try{
+    const res = await appStorage.get('importedSchedule', false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      if(parsed.schedule){
+        Object.keys(BASE_SCHEDULE).forEach(k => delete BASE_SCHEDULE[k]);
+        Object.assign(BASE_SCHEDULE, parsed.schedule);
+      }
+      if(parsed.rooms){ ROOMS.length = 0; ROOMS.push(...parsed.rooms); }
+      Object.keys(DUAL_DAY_CONFIG).forEach(k => delete DUAL_DAY_CONFIG[k]);
+      if(parsed.dualDayConfig){ Object.assign(DUAL_DAY_CONFIG, parsed.dualDayConfig); }
+      updateSourceLine({ fileName: parsed.fileName, importedAt: parsed.importedAt });
+      return;
+    }
+  }catch(e){ /* nothing imported yet — keep the built-in sample */ }
+  updateSourceLine(null);
+}
+
+(async function init(){
+  apiOnline = await probeApi();
+  updateDbStatus();
+  await seedDateOverridesIfNeeded();
+  await loadSemesterInfo();
+  await loadImportedScheduleIfAny();
+  rebuildFacultyList();
+  await refreshForDate(currentDateStr);
+  render();
+  await restoreLinkedFileHandle();
+})();
+
+// Keep "Live now" accurate as the clock moves, without needing a manual refresh.
+setInterval(() => {
+  if(isViewingToday()) render();
+}, 30000);
+</script>
+
+
+</body></html>
