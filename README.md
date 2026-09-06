@@ -1,9 +1,11 @@
 # routine_manager_seu
 
-SEU Law class routine and faculty schedule manager — a single-page app deployed on **Vercel**, with every edit stored in **MongoDB** so all users see the same routine.
+SEU Law class routine and faculty schedule manager — a single-page app deployed on **Vercel**, with every edit stored in **Upstash Redis** (from the Vercel Storage tab) so all users see the same routine.
+
+Everything lives in one Vercel dashboard: no separate database account, no connection string, no npm dependencies.
 
 - `public/index.html` — the whole app (grid view, faculty view, DOCX/HTML import, Word export, print).
-- `api/storage.js` — a serverless key/value endpoint backed by MongoDB.
+- `api/storage.js` — a serverless key/value endpoint backed by Upstash Redis over its REST API.
 
 ## How storage works
 
@@ -17,7 +19,9 @@ The app keeps a handful of string keys:
 | `importedSchedule` | the routine imported from a `.docx` / `.html` file |
 | `meta:seedApplied` | marker so bundled sample overrides are seeded only once |
 
-All of them go through `appStorage` in `public/index.html`, which calls `/api/storage`. If that endpoint is unreachable — the file opened over `file://`, the browser offline, the database down — the app falls back to `localStorage` and shows an "Offline mode" line under the toolbar, so it still works but those edits stay on that one computer.
+All of them go through `appStorage` in `public/index.html`, which calls `/api/storage`. In Redis they are namespaced under `seuRoutine:`.
+
+If the endpoint is unreachable — the file opened over `file://`, the browser offline, the store not configured — the app falls back to `localStorage` and shows an "Offline mode" line under the toolbar, so it still works but those edits stay on that one computer.
 
 ## API
 
@@ -33,44 +37,43 @@ Reads are always open. Writes require the `x-admin-key` header **only** if `ADMI
 
 ## Setup
 
-### 1. MongoDB Atlas
-
-1. Create a free cluster at <https://cloud.mongodb.com>.
-2. **Database Access** → add a user with *Read and write to any database*.
-3. **Network Access** → add `0.0.0.0/0` (Vercel functions do not have fixed IPs).
-4. **Connect → Drivers** → copy the connection string, e.g.
-   `mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority`
-
-The database (`seu_law_routine`) and collection (`routine_store`) are created automatically on the first write.
-
-### 2. Vercel
+### 1. Deploy
 
 1. <https://vercel.com/new> → import this GitHub repository.
 2. Framework preset: **Other**. Leave the build command empty — `vercel.json` already points the output at `public/`.
-3. **Settings → Environment Variables**, for Production, Preview and Development:
+3. Deploy. The site will load in offline mode until step 2 is done.
 
-   | Name | Value |
-   | --- | --- |
-   | `MONGODB_URI` | your Atlas connection string (required) |
-   | `MONGODB_DB` | `seu_law_routine` (optional) |
-   | `MONGODB_COLLECTION` | `routine_store` (optional) |
-   | `ADMIN_KEY` | a password, if editing should be restricted (optional) |
+### 2. Add the database
 
-4. Deploy. Open the site: the line under the toolbar should read *"Connected to the shared database"*.
+1. In the project, open the **Storage** tab → **Create Database** → **Upstash for Redis**.
+2. Pick a region near your users, create it, and connect it to this project (all three environments).
+3. Vercel injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+4. **Redeploy** — environment variables only reach new builds.
 
-Re-deploy after changing an environment variable — Vercel only applies them to new builds.
+Open the site: the line under the toolbar should now read *"Connected to the shared database"*.
+
+A Redis database created directly on [upstash.com](https://upstash.com) works too — it supplies `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, and both variable pairs are supported.
 
 ### 3. Locking down editing (optional)
 
-Without `ADMIN_KEY`, anyone who can open the URL can add, edit and delete classes. Set `ADMIN_KEY` to any password and the app asks for it the first time someone tries to save, then remembers it in that browser. Viewing stays open to everyone.
+Without `ADMIN_KEY`, anyone who can open the URL can add, edit and delete classes. Add an `ADMIN_KEY` environment variable in **Settings → Environment Variables**, set to any password, and the app asks for it the first time someone tries to save, then remembers it in that browser. Viewing stays open to everyone. Redeploy after adding it.
+
+## Free tier headroom
+
+| | Included | This app uses |
+| --- | --- | --- |
+| Vercel Hobby | 1M function invocations, 100 GB bandwidth / month | a few API calls per page load |
+| Upstash Redis free | 256 MB, 500K commands / month, 10 GB bandwidth | a few KB of JSON, ~5 commands per page load |
+
+Vercel's Hobby plan is for personal, non-commercial use.
 
 ## Local development
 
 ```bash
-npm install
 npm i -g vercel        # once
-cp .env.example .env.local   # then fill in MONGODB_URI
+vercel link
+vercel env pull .env.local
 vercel dev             # http://localhost:3000
 ```
 
-Opening `public/index.html` directly from disk also works, but runs in offline mode against `localStorage`.
+There are no npm dependencies to install. Opening `public/index.html` directly from disk also works, but runs in offline mode against `localStorage`.
