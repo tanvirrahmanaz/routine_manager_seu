@@ -5,7 +5,8 @@
   "description": "SEU Law class routine and faculty schedule manager, stored in Upstash Redis and deployed on Vercel.",
   "scripts": {
     "dev": "vercel dev",
-    "check": "node --check api/storage.js"
+    "check": "node --check api/storage.js && node --check api/auth.js && node --check lib/shared.js",
+    "test": "node --test \"test/*.test.js\""
   },
   "engines": {
     "node": "22.x"

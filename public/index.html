@@ -391,6 +391,22 @@
   .btn-danger{background:var(--navy); color:#fff;}
   .btn-danger:hover{background:var(--navy-2);}
 
+  /* Editing controls only show for signed-in users (or offline, local-only mode). */
+  body:not(.can-edit) .edit-only{display:none !important;}
+  .auth-bar{margin-top:6px; display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;}
+  .auth-bar .who{color:var(--navy); font-weight:600;}
+  .auth-bar .role, .user-list .role{font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; background:var(--cream); border:1px solid var(--line); border-radius:999px; padding:1px 8px; color:var(--muted);}
+  .auth-bar button{font:inherit; font-size:12.5px; padding:4px 10px; border-radius:6px; border:1.5px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer;}
+  .auth-bar button.ghost{background:transparent; color:var(--navy);}
+  .auth-bar button:hover{background:var(--navy-2); color:#fff;}
+  .form-error{color:var(--busy-bg); font-size:13px; min-height:18px; margin:-6px 0 8px;}
+  .user-list{list-style:none; margin:0 0 14px; padding:0; border:1px solid var(--line); border-radius:8px; max-height:220px; overflow:auto;}
+  .user-list li{display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .user-list li:last-child{border-bottom:none;}
+  .user-list li .email{flex:1; word-break:break-all;}
+  .user-list li button{font:inherit; font-size:12px; padding:3px 9px; border-radius:6px; border:1px solid #cfd2d6; background:transparent; color:var(--busy-bg); cursor:pointer;}
+  .user-list li button:hover{background:#fbeaea;}
+
   .confirm-modal .modal{max-width:340px; text-align:center;}
   .confirm-modal h3{font-size:17.5px;}
 
@@ -479,12 +495,13 @@
     <div class="masthead-right">
       <span id="roomsLine">Rooms: 413, 414, 416, 417, 418, 801</span><br>
       <b>Every week</b> repeats the same routine, active until you import a new one<br>
-      <span id="sourceLine">Routine source: imported from <b>Class_Routine.doc</b> · 8/24/2026 · <a href="#" id="resetSourceLink" style="color:var(--navy);">reset to built-in sample</a></span>
+      <span id="sourceLine">Routine source: imported from <b>Class_Routine.doc</b> · 8/24/2026 · <a href="#" id="resetSourceLink" class="edit-only" style="color:var(--navy);">reset to built-in sample</a></span>
+      <div class="auth-bar" id="authBar"></div>
     </div>
 
   </div>
 
-  <div class="semester-bar">
+  <div class="semester-bar edit-only">
     <span class="semester-label">Semester</span>
     <select id="semesterSelect">
       <option value="Spring">Spring</option>
@@ -515,12 +532,12 @@
       <span><span class="dot busy"></span> Class in session</span>
       <span><span class="dot date-only"></span> One-off change (this date only)</span>
     </div>
-    <button class="print-btn" id="importBtn">📥 Import</button>
-    <button class="print-btn" id="genBtn">⚙️ Generate</button>
+    <button class="print-btn edit-only" id="importBtn">📥 Import</button>
+    <button class="print-btn edit-only" id="genBtn">⚙️ Generate</button>
     <button class="print-btn" id="printBtn">🖨 Print</button>
     <button class="print-btn" id="saveHtmlBtn" style="background:var(--navy);border-color:var(--navy);" disabled="">Saving…</button>
     <button class="print-btn" id="linkFileBtn" style="background: var(--green); border-color: var(--green); opacity: 0.55;" title="Chrome / Edge only">🔗 Link this file for auto-save</button>
-    <button class="print-btn" id="clearBtn" style="background:var(--busy-bg);border-color:var(--busy-bg);">🗑 Clear data</button>
+    <button class="print-btn edit-only" id="clearBtn" style="background:var(--busy-bg);border-color:var(--busy-bg);">🗑 Clear data</button>
   </div>
   <div class="link-status" id="linkStatusLine" style="font-size: 12.5px; color: var(--muted); margin: -12px 0px 16px 2px; cursor: pointer;">Direct auto-save needs Chrome or Edge — Save/Update will download a new copy here.</div>
   <div class="link-status" id="dbStatusLine" style="font-size: 12.5px; color: var(--muted); margin: -10px 0px 16px 2px;">Connecting to the shared database…</div>
@@ -713,6 +730,76 @@
 <div id="printArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- Sign in -->
+<div class="overlay" id="loginOverlay">
+  <div class="modal">
+    <h3>Sign in</h3>
+    <div class="meta">Viewing is open to everyone. Sign in to change the routine.</div>
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <div class="form-error" id="loginError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelLoginBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="confirmLoginBtn">Sign in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change password -->
+<div class="overlay" id="passwordOverlay">
+  <div class="modal">
+    <h3>Change password</h3>
+    <div class="meta" id="passwordMeta"></div>
+    <form id="passwordForm">
+      <div class="field">
+        <label for="pwCurrent">Current password</label>
+        <input type="password" id="pwCurrent" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="pwNext">New password (6+ characters)</label>
+        <input type="password" id="pwNext" autocomplete="new-password" minlength="6" required>
+      </div>
+      <div class="form-error" id="passwordError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelPasswordBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="confirmPasswordBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Manage editors (admin) -->
+<div class="overlay" id="usersOverlay">
+  <div class="modal" style="max-width:460px;">
+    <h3>Editors</h3>
+    <div class="meta">These accounts can change the routine. The admin account cannot be removed here.</div>
+    <ul class="user-list" id="userList"></ul>
+    <form id="addUserForm">
+      <div class="field">
+        <label for="newUserEmail">Add editor — email</label>
+        <input type="email" id="newUserEmail" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label for="newUserPassword">Password for them (6+ characters)</label>
+        <input type="text" id="newUserPassword" autocomplete="off" minlength="6" required>
+      </div>
+      <div class="form-error" id="usersError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="closeUsersBtn">Close</button>
+        <button type="submit" class="btn btn-primary" id="addUserBtn">Add editor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const BASE_SCHEDULE = {"Sunday":[{"time":"10:30-11:30","room":"413","type":"class","section":"65B","course":"ELL1202.2","teacher":"MUMA"},{"time":"11:30-12:30","room":"413","type":"class","section":"65B","course":"LLB1214.2","teacher":"DFHM"},{"time":"09:30-10:30","room":"414","type":"class","section":"65A","course":"LLB1212.1","teacher":"SMTA"},{"time":"10:30-11:30","room":"414","type":"class","section":"65A","course":"LLB1214.1","teacher":"DFHM"},{"time":"12:30-13:30","room":"414","type":"class","section":"62A","course":"LLB234.1","teacher":"ARD"},{"time":"13:30-14:30","room":"414","type":"class","section":"62A","course":"LLB314.1","teacher":"NAO"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"LLB314.2","teacher":"NAO"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"LLB234.2","teacher":"ARD"},{"time":"09:30-10:30","room":"416","type":"class","section":"64A","course":"ENG103.1","teacher":"SAHR"},{"time":"10:30-11:30","room":"416","type":"class","section":"64A","course":"LLB212.1","teacher":"SAS"},{"time":"11:30-12:30","room":"416","type":"class","section":"64A","course":"GEN122.1","teacher":"NAO"},{"time":"13:30-14:30","room":"416","type":"class","section":"63B","course":"LLB225.2","teacher":"MRHR"},{"time":"14:30-15:30","room":"416","type":"class","section":"63B","course":"ENG105.2","teacher":"MUMA"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB313.2","teacher":"ARD"},{"time":"10:30-11:30","room":"417","type":"class","section":"61B","course":"LLB322.2","teacher":"MRHR"},{"time":"11:30-12:30","room":"417","type":"class","section":"61B","course":"LLB333.2","teacher":"SAS"},{"time":"12:30-13:30","room":"417","type":"class","section":"60A","course":"LLB323.1","teacher":"SMTA"},{"time":"13:30-14:30","room":"417","type":"class","section":"60A","course":"LLB334.1","teacher":"DFHM"},{"time":"09:30-10:30","room":"418","type":"class","section":"66A","course":"ELL1101.1","teacher":"MUMA"},{"time":"10:30-11:30","room":"418","type":"class","section":"66A","course":"BEN1101.1","teacher":"MLA"},{"time":"11:30-12:30","room":"418","type":"class","section":"66A","course":"LLB1115.1","teacher":"SMTA"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"ELL1101.2","teacher":"MUMA"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"BEN1101.2","teacher":"JANA"},{"time":"14:30-15:30","room":"418","type":"class","section":"66B","course":"LLB1115.2","teacher":"SMTA"}],"Monday":[{"time":"08:30-09:30","room":"413","type":"class","section":"59A","course":"LLB414.1","teacher":"AYA"},{"time":"09:30-10:30","room":"413","type":"class","section":"59A","course":"LLB421.1","teacher":"ARD"},{"time":"10:30-11:30","room":"413","type":"class","section":"59A","course":"LLB413.1","teacher":"SAS"},{"time":"11:30-12:30","room":"413","type":"class","section":"65B","course":"GED1202.2","teacher":"ISL"},{"time":"12:30-13:30","room":"413","type":"class","section":"65B","course":"LLB1211.2","teacher":"RAD"},{"time":"13:30-14:30","room":"413","type":"class","section":"59B","course":"LLB414.2","teacher":"AYA"},{"time":"14:30-15:30","room":"413","type":"class","section":"65B","course":"LLB1212.2","teacher":"SMTA"},{"time":"15:30-16:30","room":"413","type":"class","section":"65B","course":"GED3268.2","teacher":"MRHR"},{"time":"08:30-09:30","room":"414","type":"class","section":"62A","course":"LLB321.1","teacher":"BK"},{"time":"09:30-10:30","room":"414","type":"class","section":"62A","course":"LLB231.1","teacher":"MJM"},{"time":"10:30-11:30","room":"414","type":"class","section":"62A","course":"LLB235.1","teacher":"AI"},{"time":"11:30-12:30","room":"414","type":"class","section":"63A","course":"ENG105.1","teacher":"MUMA"},{"time":"12:30-13:30","room":"414","type":"class","section":"63A","course":"LLB225.1","teacher":"MRHR"},{"time":"13:30-14:30","room":"414","type":"class","section":"64B","course":"LLB212.2","teacher":"SAS"},{"time":"14:30-15:30","room":"414","type":"class","section":"64B","course":"LLB222.2","teacher":"AI"},{"time":"15:30-16:30","room":"414","type":"class","section":"64B","course":"GEN122.2","teacher":"NAO"},{"time":"16:30-17:30","room":"414","type":"class","section":"64B","course":"ENG103.2","teacher":"SAHR"},{"time":"08:30-09:30","room":"416","type":"class","section":"65A","course":"GED3268.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"416","type":"class","section":"65A","course":"GED1202.1","teacher":"ISL"},{"time":"10:30-11:30","room":"416","type":"class","section":"65A","course":"LLB1211.1","teacher":"RAD"},{"time":"11:30-12:30","room":"416","type":"class","section":"60B","course":"LLB411.2","teacher":"BK"},{"time":"12:30-13:30","room":"416","type":"class","section":"60B","course":"LLB332.2","teacher":"ISL"},{"time":"13:30-14:30","room":"416","type":"class","section":"65A","course":"ELL1202.1","teacher":"MUMA"},{"time":"14:30-15:30","room":"416","type":"class","section":"60B","course":"LLB335.2","teacher":"NAO"},{"time":"15:30-16:30","room":"416","type":"class","section":"60B","course":"LLB323.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"417","type":"class","section":"60A","course":"LLB332.1","teacher":"ISL"},{"time":"09:30-10:30","room":"417","type":"class","section":"60A","course":"LLB411.1","teacher":"BK"},{"time":"10:30-11:30","room":"417","type":"class","section":"60A","course":"LLB335.1","teacher":"NAO"},{"time":"11:30-12:30","room":"417","type":"class","section":"66A","course":"LLB1111.1","teacher":"AI"},{"time":"12:30-13:30","room":"417","type":"class","section":"66A","course":"LLB1213.1","teacher":"AYA"},{"time":"13:30-14:30","room":"417","type":"class","section":"66A","course":"LLB1114.1","teacher":"BK"},{"time":"14:30-15:30","room":"417","type":"class","section":"59B","course":"LLB413.2","teacher":"SAS"},{"time":"15:30-16:30","room":"417","type":"class","section":"59B","course":"LLB421.2","teacher":"ARD"},{"time":"08:30-09:30","room":"418","type":"class","section":"61A","course":"LLB311.1","teacher":"MJM"},{"time":"09:30-10:30","room":"418","type":"class","section":"61A","course":"LLB333.1","teacher":"SAS"},{"time":"10:30-11:30","room":"418","type":"class","section":"61A","course":"LLB313.1","teacher":"ARD"},{"time":"11:30-12:30","room":"418","type":"class","section":"61A","course":"LLB322.1","teacher":"MRHR"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"LLB1114.2","teacher":"BK"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"LLB1111.2","teacher":"AI"},{"time":"14:30-15:30","room":"418","type":"class","section":"66B","course":"LLB1213.2","teacher":"AYA"}],"Tuesday":[{"time":"09:30-10:30","room":"413","type":"class","section":"65B","course":"ELL1202.2","teacher":"MUMA"},{"time":"10:30-11:30","room":"413","type":"class","section":"65B","course":"LLB1214.2","teacher":"DFHM"},{"time":"11:30-12:30","room":"413","type":"class","section":"64A","course":"GEN122.1","teacher":"NAO"},{"time":"12:30-13:30","room":"413","type":"class","section":"64A","course":"ENG103.1","teacher":"SAHR"},{"time":"13:30-14:30","room":"413","type":"class","section":"64A","course":"LLB212.1","teacher":"SAS"},{"time":"14:30-15:30","room":"413","type":"class","section":"63A","course":"LLB223.1","teacher":"AYA"},{"time":"15:30-16:30","room":"413","type":"class","section":"63A","course":"LLB225.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"414","type":"class","section":"64A","course":"LLB222.1","teacher":"AI"},{"time":"13:30-14:30","room":"414","type":"class","section":"62B","course":"LLB231.2","teacher":"MJM"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"LLB321.2","teacher":"BK"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"LLB235.2","teacher":"AI"},{"time":"16:30-17:30","room":"414","type":"class","section":"62B","course":"LLB314.2","teacher":"NAO"},{"time":"08:30-09:30","room":"416","type":"class","section":"66A","course":"ELL1101.1","teacher":"MUMA"},{"time":"09:30-10:30","room":"416","type":"class","section":"66A","course":"LLB1115.1","teacher":"SMTA"},{"time":"10:30-11:30","room":"416","type":"class","section":"66A","course":"BEN1101.1","teacher":"MLA"},{"time":"11:30-12:30","room":"416","type":"class","section":"63B","course":"ENG105.2","teacher":"MUMA"},{"time":"12:30-13:30","room":"416","type":"label","label":"DACM"},{"time":"13:30-14:30","room":"416","type":"class","section":"61A","course":"LLB312.1","teacher":"RAD"},{"time":"14:30-15:30","room":"416","type":"class","section":"61A","course":"LLB311.1","teacher":"MJM"},{"time":"15:30-16:30","room":"416","type":"class","section":"63B","course":"GED110.2","teacher":"ISL"},{"time":"08:30-09:30","room":"417","type":"class","section":"61B","course":"LLB311.2","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB312.2","teacher":"RAD"},{"time":"10:30-11:30","room":"417","type":"class","section":"65A","course":"LLB1212.1","teacher":"SMTA"},{"time":"11:30-12:30","room":"417","type":"class","section":"65A","course":"LLB1214.1","teacher":"DFHM"},{"time":"12:30-13:30","room":"417","type":"class","section":"66B","course":"ELL1101.2","teacher":"MUMA"},{"time":"13:30-14:30","room":"417","type":"class","section":"66B","course":"BEN1101.2","teacher":"JANA"},{"time":"14:30-15:30","room":"417","type":"class","section":"66B","course":"LLB1115.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"418","type":"class","section":"60B","course":"LLB332.2","teacher":"ISL"},{"time":"09:30-10:30","room":"418","type":"class","section":"60B","course":"LLB411.2","teacher":"BK"},{"time":"11:30-12:30","room":"418","type":"class","section":"61B","course":"LLB322.2","teacher":"MRHR"},{"time":"12:30-13:30","room":"418","type":"label","label":"DACM"},{"time":"13:30-14:30","room":"418","type":"class","section":"63B","course":"LLB225.2","teacher":"MRHR"},{"time":"14:30-15:30","room":"418","type":"class","section":"60A","course":"LLB334.1","teacher":"DFHM"},{"time":"15:30-16:30","room":"418","type":"class","section":"60A","course":"LLB323.1","teacher":"SMTA"}],"Wednesday":[{"time":"08:30-09:30","room":"413","type":"class","section":"60A","course":"LLB335.1","teacher":"NAO"},{"time":"09:30-10:30","room":"413","type":"class","section":"60A","course":"LLB411.1","teacher":"BK"},{"time":"10:30-11:30","room":"413","type":"class","section":"60A","course":"LLB332.1","teacher":"ISL"},{"time":"12:30-13:30","room":"413","type":"class","section":"64B","course":"ENG103.2","teacher":"SAHR"},{"time":"13:30-14:30","room":"413","type":"class","section":"64B","course":"LLB212.2","teacher":"SAS"},{"time":"14:30-15:30","room":"413","type":"class","section":"64B","course":"GEN122.2","teacher":"NAO"},{"time":"09:30-10:30","room":"414","type":"class","section":"59A","course":"LLB421.1","teacher":"ARD"},{"time":"10:30-11:30","room":"414","type":"class","section":"59A","course":"LLB413.1","teacher":"SAS"},{"time":"11:30-12:30","room":"414","type":"class","section":"65A","course":"LLB1211.1","teacher":"RAD"},{"time":"13:30-14:30","room":"414","type":"class","section":"65B","course":"LLB1212.2","teacher":"SMTA"},{"time":"14:30-15:30","room":"414","type":"class","section":"65B","course":"GED3268.2","teacher":"MRHR"},{"time":"15:30-16:30","room":"414","type":"class","section":"65B","course":"LLB1211.2","teacher":"RAD"},{"time":"16:30-17:30","room":"414","type":"class","section":"65B","course":"GED1202.2","teacher":"ISL"},{"time":"08:30-09:30","room":"416","type":"class","section":"63A","course":"ENG105.1","teacher":"MUMA"},{"time":"09:30-10:30","room":"416","type":"class","section":"63A","course":"GED110.1","teacher":"ISL"},{"time":"10:30-11:30","room":"416","type":"class","section":"63B","course":"LLB224.2","teacher":"MJM"},{"time":"11:30-12:30","room":"416","type":"class","section":"63B","course":"LLB223.2","teacher":"AYA"},{"time":"12:30-13:30","room":"416","type":"class","section":"63B","course":"LLB232.2","teacher":"RAD"},{"time":"13:30-14:30","room":"416","type":"class","section":"65A","course":"GED3268.1","teacher":"MRHR"},{"time":"14:30-15:30","room":"416","type":"class","section":"65A","course":"GED1202.1","teacher":"ISL"},{"time":"15:30-16:30","room":"416","type":"class","section":"65A","course":"ELL1202.1","teacher":"MUMA"},{"time":"08:30-09:30","room":"417","type":"class","section":"62A","course":"LLB231.1","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"62A","course":"LLB314.1","teacher":"NAO"},{"time":"10:30-11:30","room":"417","type":"class","section":"66A","course":"LLB1213.1","teacher":"AYA"},{"time":"11:30-12:30","room":"417","type":"class","section":"66A","course":"LLB1111.1","teacher":"AI"},{"time":"12:30-13:30","room":"417","type":"class","section":"66A","course":"LLB1114.1","teacher":"BK"},{"time":"13:30-14:30","room":"417","type":"class","section":"60B","course":"LLB335.2","teacher":"NAO"},{"time":"14:30-15:30","room":"417","type":"class","section":"60B","course":"LLB323.2","teacher":"SMTA"},{"time":"08:30-09:30","room":"418","type":"class","section":"61A","course":"LLB322.1","teacher":"MRHR"},{"time":"09:30-10:30","room":"418","type":"class","section":"61A","course":"LLB333.1","teacher":"SAS"},{"time":"10:30-11:30","room":"418","type":"class","section":"61A","course":"LLB313.1","teacher":"ARD"},{"time":"11:30-12:30","room":"418","type":"class","section":"66B","course":"LLB1114.2","teacher":"BK"},{"time":"12:30-13:30","room":"418","type":"class","section":"66B","course":"LLB1111.2","teacher":"AI"},{"time":"13:30-14:30","room":"418","type":"class","section":"66B","course":"LLB1213.2","teacher":"AYA"},{"time":"14:30-15:30","room":"418","type":"class","section":"59B","course":"LLB414.2","teacher":"AYA"},{"time":"15:30-16:30","room":"418","type":"class","section":"59B","course":"LLB413.2","teacher":"SAS"},{"time":"16:30-17:30","room":"418","type":"class","section":"59B","course":"LLB421.2","teacher":"ARD"},{"time":"12:30-13:30","room":"801","type":"class","section":"62A","course":"LLB234.1","teacher":"ARD"},{"time":"13:30-14:30","room":"801","type":"class","section":"62A","course":"LLB235.1","teacher":"AI"}],"Thursday":[{"time":"10:30-11:30","room":"413","type":"class","section":"63A","course":"GED110.1","teacher":"ISL"},{"time":"11:30-12:30","room":"413","type":"class","section":"63A","course":"LLB224.1","teacher":"MJM"},{"time":"12:30-13:30","room":"413","type":"class","section":"63A","course":"LLB232.1","teacher":"RAD"},{"time":"14:30-15:30","room":"413","type":"class","section":"63A","course":"LLB223.1","teacher":"AYA"},{"time":"08:30-09:30","room":"414","type":"class","section":"63B","course":"GED110.2","teacher":"ISL"},{"time":"09:30-10:30","room":"414","type":"class","section":"63B","course":"LLB224.2","teacher":"MJM"},{"time":"12:30-13:30","room":"414","type":"class","section":"63B","course":"LLB223.2","teacher":"AYA"},{"time":"13:30-14:30","room":"414","type":"class","section":"63B","course":"LLB232.2","teacher":"RAD"},{"time":"10:30-11:30","room":"416","type":"class","section":"64B","course":"LLB222.2","teacher":"AI"},{"time":"11:30-12:30","room":"416","type":"class","section":"64B","course":"CSE105.2","teacher":"AVIC"},{"time":"12:30-13:30","room":"416","type":"class","section":"64B","course":"CSE105.2","teacher":"AVIC"},{"time":"08:30-09:30","room":"417","type":"class","section":"61B","course":"LLB311.2","teacher":"MJM"},{"time":"09:30-10:30","room":"417","type":"class","section":"61B","course":"LLB313.2","teacher":"ARD"},{"time":"10:30-11:30","room":"417","type":"class","section":"61B","course":"LLB333.2","teacher":"SAS"},{"time":"11:30-12:30","room":"417","type":"class","section":"61B","course":"LLB312.2","teacher":"RAD"},{"time":"12:30-13:30","room":"417","type":"class","section":"64A","course":"LLB222.1","teacher":"AI"},{"time":"13:30-14:30","room":"417","type":"class","section":"64A","course":"CSE105.1","teacher":"AVIC"},{"time":"14:30-15:30","room":"417","type":"class","section":"64A","course":"CSE105.1","teacher":"AVIC"},{"time":"11:30-12:30","room":"418","type":"class","section":"62B","course":"LLB235.2","teacher":"AI"},{"time":"12:30-13:30","room":"418","type":"class","section":"62B","course":"LLB231.2","teacher":"MJM"},{"time":"13:30-14:30","room":"418","type":"class","section":"62B","course":"LLB234.2","teacher":"ARD"},{"time":"08:30-09:30","room":"801","type":"class","section":"58A","course":"LLB433.1","teacher":"KNM"},{"time":"09:30-10:30","room":"801","type":"class","section":"58A","course":"LLB433.1","teacher":"KNM"},{"time":"11:30-12:30","room":"801","type":"class","section":"58A","course":"LLB421.3","teacher":"ARD"},{"time":"12:30-13:30","room":"801","type":"class","section":"58A","course":"LLB421.3","teacher":"ARD"}],"Friday":[{"time":"12:30-14:00","room":"413","type":"label","label":"Prayer Break","group":"LLB"},{"time":"15:00-16:00","room":"413","type":"class","section":"60A","course":"LLB434.1","teacher":"DMG","group":"LLB"},{"time":"16:00-17:00","room":"413","type":"class","section":"60A","course":"LLB434.1","teacher":"DMG","group":"LLB"},{"time":"08:30-09:30","room":"414","type":"class","section":"59A","course":"LLB435.1","teacher":"THR","group":"LLB"},{"time":"09:30-10:30","room":"414","type":"class","section":"59A","course":"LLB435.1","teacher":"THR","group":"LLB"},{"time":"10:30-11:30","room":"414","type":"class","section":"59A","course":"LLB414.1","teacher":"AYA","group":"LLB"},{"time":"12:30-14:00","room":"414","type":"label","label":"Prayer Break","group":"LLB"},{"time":"12:30-14:00","room":"416","type":"label","label":"Prayer Break","group":"LLB"},{"time":"14:00-15:00","room":"416","type":"class","section":"60B","course":"LLB434.2","teacher":"MAHA","group":"LLB"},{"time":"15:00-16:00","room":"416","type":"class","section":"60B","course":"LLB434.2","teacher":"MAHA","group":"LLB"},{"time":"08:30-09:50","room":"417","type":"class","section":"62","course":"LLM5215.1","teacher":"MMN","group":"LLM"},{"time":"10:00-11:20","room":"417","type":"class","section":"62","course":"LLM5215.1","teacher":"MMN","group":"LLM"},{"time":"11:30-12:50","room":"417","type":"class","section":"62","course":"LLM5225.1","teacher":"ISL","group":"LLM"},{"time":"13:00-14:20","room":"417","type":"label","label":"Prayer Break","group":"LLM"},{"time":"14:30-15:50","room":"417","type":"class","section":"62","course":"LLM5225.1","teacher":"ISL","group":"LLM"},{"time":"08:30-09:50","room":"418","type":"class","section":"63","course":"LLM5135.1","teacher":"AI","group":"LLM"},{"time":"10:00-11:20","room":"418","type":"class","section":"63","course":"LLM5135.1","teacher":"AI","group":"LLM"},{"time":"11:30-12:50","room":"418","type":"class","section":"63","course":"LLM5145.1","teacher":"AYA","group":"LLM"},{"time":"13:00-14:20","room":"418","type":"label","label":"Prayer Break","group":"LLM"},{"time":"14:30-15:50","room":"418","type":"class","section":"63","course":"LLM5145.1","teacher":"AYA","group":"LLM"}],"Saturday":[{"time":"08:30-09:30","room":"413","type":"class","section":"64A","course":"LLB226.1","teacher":"DAHS","group":"LLB"},{"time":"09:30-10:30","room":"413","type":"class","section":"64A","course":"LLB226.1","teacher":"DAHS","group":"LLB"},{"time":"10:30-11:30","room":"413","type":"class","section":"61A","course":"LLB312.1","teacher":"RAD","group":"LLB"},{"time":"11:30-12:30","room":"413","type":"class","section":"58A","course":"LLB423.1","teacher":"SHU","group":"LLB"},{"time":"12:30-13:30","room":"413","type":"class","section":"58A","course":"LLB423.1","teacher":"SHU","group":"LLB"},{"time":"13:30-14:30","room":"413","type":"class","section":"62B","course":"LLB321.2","teacher":"BK","group":"LLB"},{"time":"14:30-15:30","room":"413","type":"class","section":"60B","course":"LLB334.2","teacher":"MFZ","group":"LLB"},{"time":"15:30-16:30","room":"413","type":"class","section":"60B","course":"LLB334.2","teacher":"MFZ","group":"LLB"},{"time":"11:30-12:30","room":"414","type":"class","section":"62A","course":"LLB321.1","teacher":"BK","group":"LLB"},{"time":"12:30-13:30","room":"414","type":"class","section":"62A","course":"MGT111.1","teacher":"HAIS","group":"LLB"},{"time":"13:30-14:30","room":"414","type":"class","section":"62A","course":"MGT111.1","teacher":"HAIS","group":"LLB"},{"time":"14:30-15:30","room":"414","type":"class","section":"62B","course":"MGT111.2","teacher":"HAIS","group":"LLB"},{"time":"15:30-16:30","room":"414","type":"class","section":"62B","course":"MGT111.2","teacher":"HAIS","group":"LLB"},{"time":"10:30-11:30","room":"416","type":"class","section":"64B","course":"LLB226.2","teacher":"DAHS","group":"LLB"},{"time":"11:30-12:30","room":"416","type":"class","section":"64B","course":"LLB226.2","teacher":"DAHS","group":"LLB"},{"time":"12:30-13:30","room":"416","type":"class","section":"61A","course":"ECO111.1","teacher":"AMRS","group":"LLB"},{"time":"13:30-14:30","room":"416","type":"class","section":"61A","course":"ECO111.1","teacher":"AMRS","group":"LLB"},{"time":"14:30-15:30","room":"416","type":"class","section":"61B","course":"ECO111.2","teacher":"AMRS","group":"LLB"},{"time":"15:30-16:30","room":"416","type":"class","section":"61B","course":"ECO111.2","teacher":"AMRS","group":"LLB"},{"time":"08:30-09:30","room":"801","type":"class","section":"58A","course":"LLB432.1","teacher":"MSAM","group":"LLB"},{"time":"09:30-10:30","room":"801","type":"class","section":"58A","course":"LLB432.1","teacher":"MSAM","group":"LLB"},{"time":"10:30-11:30","room":"801","type":"class","section":"59B","course":"LLB435.2","teacher":"MNHC","group":"LLB"},{"time":"11:30-12:30","room":"801","type":"class","section":"59B","course":"LLB435.2","teacher":"MNHC","group":"LLB"},{"time":"12:30-13:30","room":"801","type":"class","section":"63A","course":"LLB232.1","teacher":"RAD","group":"LLB"},{"time":"14:30-15:30","room":"801","type":"class","section":"63A","course":"LLB224.1","teacher":"MJM","group":"LLB"},{"time":"08:30-09:50","room":"417","type":"class","section":"63","course":"GEN5115.1","teacher":"DSU","group":"LLM"},{"time":"10:00-11:20","room":"417","type":"class","section":"63","course":"GEN5115.1","teacher":"DSU","group":"LLM"},{"time":"11:30-12:50","room":"417","type":"class","section":"62","course":"LLM5235.1","teacher":"DSU","group":"LLM"},{"time":"13:00-14:20","room":"417","type":"class","section":"62","course":"LLM5235.1","teacher":"DSU","group":"LLM"},{"time":"08:30-09:50","room":"418","type":"class","section":"62","course":"LLM5245.1","teacher":"BK","group":"LLM"},{"time":"10:00-11:20","room":"418","type":"class","section":"62","course":"LLM5245.1","teacher":"BK","group":"LLM"},{"time":"11:30-12:50","room":"418","type":"class","section":"63","course":"LLM5125.1","teacher":"MJM","group":"LLM"},{"time":"13:00-14:20","room":"418","type":"class","section":"63","course":"LLM5125.1","teacher":"MJM","group":"LLM"},{"time":"14:30-15:50","room":"418","type":"class","section":"63","course":"LLM5115.1","teacher":"RAD","group":"LLM"},{"time":"16:00-17:20","room":"418","type":"class","section":"63","course":"LLM5115.1","teacher":"RAD","group":"LLM"}]};
 const ROOMS = ["413","414","416","417","418","801"];
@@ -726,7 +813,6 @@ const ROOMS = ["413","414","416","417","418","801"];
 // that state stay on that one computer.
 const STORAGE_PREFIX = 'seuLawRoutine:';
 const API_BASE = '/api/storage';
-const ADMIN_KEY_KEY = STORAGE_PREFIX + 'adminKey';
 const SEED_MARKER_KEY = 'meta:seedApplied';
 // One-off date changes made before this file was last updated/saved,
 // carried over so they still apply after this export.
@@ -734,7 +820,6 @@ const SEED_DATE_OVERRIDES = {"override:2026-08-25":"{\"removed\":[],\"added\":[{
 // Seeding now happens in seedDateOverridesIfNeeded(), called from init().
 
 let apiOnline = false;
-let apiNeedsAuth = false;
 
 function localGet(key){
   try{ return localStorage.getItem(STORAGE_PREFIX + key); }catch(e){ return null; }
@@ -757,35 +842,16 @@ function localList(prefix){
   return keys;
 }
 
-function getAdminKey(){
-  try{ return localStorage.getItem(ADMIN_KEY_KEY) || ''; }catch(e){ return ''; }
-}
-function setAdminKey(value){
-  try{
-    if(value) localStorage.setItem(ADMIN_KEY_KEY, value);
-    else localStorage.removeItem(ADMIN_KEY_KEY);
-  }catch(e){ /* ignore */ }
-}
-
 async function apiFetch(query, options){
-  const opts = Object.assign({ cache: 'no-store' }, options || {});
-  opts.headers = Object.assign({}, opts.headers || {});
-  const adminKey = getAdminKey();
-  if(adminKey) opts.headers['x-admin-key'] = adminKey;
-  return fetch(API_BASE + (query || ''), opts);
+  return fetch(API_BASE + (query || ''), Object.assign({ cache: 'no-store' }, options || {}));
 }
 
-// Writes retry once behind a password prompt, for deployments that set ADMIN_KEY.
+// A 401 means nobody is signed in on this browser: show the sign-in dialog and
+// let the caller report "could not save" — the user retries after signing in.
 async function apiWrite(query, options){
   let res = null;
   try{ res = await apiFetch(query, options); }catch(e){ return null; }
-  if(res.status === 401){
-    const entered = window.prompt('Editing is password-protected on this site. Enter the admin password:');
-    if(!entered) return res;
-    setAdminKey(entered.trim());
-    try{ res = await apiFetch(query, options); }catch(e){ return null; }
-    if(res.status === 401) setAdminKey('');
-  }
+  if(res.status === 401){ authUser = null; applyAuthUi(); openLogin(); }
   return res;
 }
 
@@ -795,7 +861,6 @@ async function probeApi(){
     const res = await fetch(API_BASE + '?ping=1', { cache: 'no-store' });
     if(!res.ok) return false;
     const data = await res.json();
-    apiNeedsAuth = !!(data && data.auth);
     return !!(data && data.ok);
   }catch(e){ return false; }
 }
@@ -804,8 +869,9 @@ function updateDbStatus(){
   const el = document.getElementById('dbStatusLine');
   if(!el) return;
   if(apiOnline){
-    el.textContent = 'Connected to the shared database — every change is saved for everyone.' +
-      (apiNeedsAuth ? ' Editing asks for the admin password.' : '');
+    el.textContent = authUser
+      ? 'Connected to the shared database — signed in as ' + authUser.email + ', every change is saved for everyone.'
+      : 'Connected to the shared database — viewing only. Sign in to make changes.';
     el.style.color = 'var(--green)';
   }else{
     el.textContent = 'Offline mode — changes are saved in this browser only and are not shared.';
@@ -833,7 +899,6 @@ const appStorage = {
     return { key, value: raw };
   },
   async set(key, value){
-    localSet(key, value);
     if(apiOnline){
       const res = await apiWrite('', {
         method: 'POST',
@@ -842,14 +907,15 @@ const appStorage = {
       });
       if(!res || !res.ok) return null;
     }
+    localSet(key, value);
     return { key, value };
   },
   async delete(key){
-    localDelete(key);
     if(apiOnline){
       const res = await apiWrite('?key=' + encodeURIComponent(key), { method: 'DELETE' });
       if(!res || !res.ok) return null;
     }
+    localDelete(key);
     return { key, deleted: true };
   },
   async list(prefix){
@@ -865,6 +931,163 @@ const appStorage = {
   }
 };
 
+// ===== Sign-in state =====
+// authUser is {email, role} when the seu_session cookie is valid, else null.
+// Editing is allowed when signed in, or in offline (local-only) mode.
+let authUser = null;
+const AUTH_BASE = '/api/auth';
+
+async function authPost(body){
+  let res = null;
+  try{
+    res = await fetch(AUTH_BASE, { method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  }catch(e){ return { ok: false, status: 0, data: null }; }
+  let data = null;
+  try{ data = await res.json(); }catch(e){ /* empty body */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function loadAuthUser(){
+  authUser = null;
+  if(apiOnline){
+    try{
+      const res = await fetch(AUTH_BASE, { cache: 'no-store' });
+      if(res.ok){ const data = await res.json(); authUser = (data && data.user) || null; }
+    }catch(e){ /* treat as signed out */ }
+  }
+  applyAuthUi();
+}
+
+function canEdit(){ return !apiOnline || !!authUser; }
+
+// Call at the top of any edit entry point. Returns false (and opens sign-in)
+// when the site is online but nobody is signed in.
+function requireSignIn(){
+  if(canEdit()) return true;
+  openLogin();
+  return false;
+}
+
+function applyAuthUi(){
+  document.body.classList.toggle('can-edit', canEdit());
+  const bar = document.getElementById('authBar');
+  if(bar){
+    bar.innerHTML = '';
+    if(!apiOnline){
+      bar.innerHTML = '<span class="role">offline · local only</span>';
+    }else if(authUser){
+      bar.innerHTML = '<span class="who"></span><span class="role"></span>' +
+        '<button type="button" class="ghost" id="passwordBtn">Change password</button>' +
+        (authUser.role === 'admin' ? '<button type="button" id="usersBtn">Manage editors</button>' : '') +
+        '<button type="button" class="ghost" id="logoutBtn">Sign out</button>';
+      bar.querySelector('.who').textContent = authUser.email;
+      bar.querySelector('.role').textContent = authUser.role;
+      bar.querySelector('#passwordBtn').onclick = openPasswordModal;
+      const ub = bar.querySelector('#usersBtn'); if(ub) ub.onclick = openUsersModal;
+      bar.querySelector('#logoutBtn').onclick = async () => { await authPost({ action: 'logout' }); await loadAuthUser(); };
+    }else{
+      bar.innerHTML = '<button type="button" id="signInBtn">Sign in to edit</button>';
+      bar.querySelector('#signInBtn').onclick = openLogin;
+    }
+  }
+  updateDbStatus();
+}
+
+const loginOverlay = document.getElementById('loginOverlay');
+const loginError = document.getElementById('loginError');
+function openLogin(){
+  loginError.textContent = '';
+  document.getElementById('loginPassword').value = '';
+  loginOverlay.classList.add('show');
+  document.getElementById('loginEmail').focus();
+}
+document.getElementById('cancelLoginBtn').onclick = () => loginOverlay.classList.remove('show');
+document.getElementById('loginForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const btn = document.getElementById('confirmLoginBtn');
+  btn.disabled = true; loginError.textContent = '';
+  const r = await authPost({ action: 'login', email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value });
+  btn.disabled = false;
+  if(r.ok){
+    authUser = r.data.user;
+    loginOverlay.classList.remove('show');
+    applyAuthUi();
+    await seedDateOverridesIfNeeded();
+    return;
+  }
+  loginError.textContent =
+    r.status === 401 ? 'Wrong email or password.' :
+    r.status === 429 ? 'Too many attempts — try again in 15 minutes.' :
+    r.status === 503 ? 'Sign-in is not set up on this site yet (ADMIN_EMAIL / ADMIN_PASSWORD).' :
+    'Could not sign in. Please try again.';
+};
+
+const passwordOverlay = document.getElementById('passwordOverlay');
+const passwordError = document.getElementById('passwordError');
+function openPasswordModal(){
+  passwordError.textContent = '';
+  document.getElementById('passwordMeta').textContent = authUser ? authUser.email : '';
+  document.getElementById('pwCurrent').value = ''; document.getElementById('pwNext').value = '';
+  passwordOverlay.classList.add('show');
+  document.getElementById('pwCurrent').focus();
+}
+document.getElementById('cancelPasswordBtn').onclick = () => passwordOverlay.classList.remove('show');
+document.getElementById('passwordForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const r = await authPost({ action: 'password', current: document.getElementById('pwCurrent').value, next: document.getElementById('pwNext').value });
+  if(r.ok){ passwordOverlay.classList.remove('show'); return; }
+  passwordError.textContent =
+    r.status === 401 ? 'Current password is wrong (or you were signed out).' :
+    r.status === 400 ? 'New password must be at least 6 characters.' :
+    'Could not change the password.';
+};
+
+const usersOverlay = document.getElementById('usersOverlay');
+const usersError = document.getElementById('usersError');
+function renderUserList(users){
+  const ul = document.getElementById('userList');
+  ul.innerHTML = '';
+  (users || []).forEach((u) => {
+    const li = document.createElement('li');
+    const email = document.createElement('span'); email.className = 'email'; email.textContent = u.email;
+    const role = document.createElement('span'); role.className = 'role'; role.textContent = u.role;
+    li.appendChild(email); li.appendChild(role);
+    if(u.role !== 'admin'){
+      const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = 'Remove';
+      rm.onclick = async () => {
+        if(!confirm('Remove ' + u.email + '? They will be signed out immediately.')) return;
+        const r = await authPost({ action: 'removeUser', email: u.email });
+        if(r.ok) renderUserList(r.data.users); else usersError.textContent = 'Could not remove that account.';
+      };
+      li.appendChild(rm);
+    }
+    ul.appendChild(li);
+  });
+}
+async function openUsersModal(){
+  usersError.textContent = '';
+  document.getElementById('newUserEmail').value = ''; document.getElementById('newUserPassword').value = '';
+  usersOverlay.classList.add('show');
+  const r = await authPost({ action: 'listUsers' });
+  if(r.ok) renderUserList(r.data.users); else usersError.textContent = 'Could not load the list.';
+}
+document.getElementById('closeUsersBtn').onclick = () => usersOverlay.classList.remove('show');
+document.getElementById('addUserForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  usersError.textContent = '';
+  const r = await authPost({ action: 'addUser', email: document.getElementById('newUserEmail').value, password: document.getElementById('newUserPassword').value });
+  if(r.ok){
+    renderUserList(r.data.users);
+    document.getElementById('newUserEmail').value = ''; document.getElementById('newUserPassword').value = '';
+    return;
+  }
+  usersError.textContent =
+    r.status === 409 ? 'That email already has an account.' :
+    r.status === 400 ? 'Enter a valid email and a password of 6+ characters.' :
+    r.status === 403 ? 'Only the admin can add editors.' :
+    'Could not add that account.';
+};
+
 // One-off date changes baked into this file are pushed into the database the
 // first time it runs against a fresh one, then never again — the marker key
 // records that, so "Clear data" does not resurrect them later.
@@ -877,6 +1100,7 @@ async function seedDateOverridesIfNeeded(){
     });
     return;
   }
+  if(!authUser) return;   // seeding writes; it runs the first time an editor or admin signs in
   let markerRes = null;
   try{ markerRes = await apiFetch('?key=' + encodeURIComponent(SEED_MARKER_KEY)); }catch(e){ return; }
   if(!markerRes || markerRes.status !== 404) return;
@@ -1441,7 +1665,7 @@ function updateSourceLine(meta){
     const d = new Date(meta.importedAt);
     const dstr = isNaN(d) ? '' : (' · ' + d.toLocaleDateString());
     sourceLine.innerHTML = 'Routine source: imported from <b>'+meta.fileName+'</b>'+dstr+
-      ' · <a href="#" id="resetSourceLink" style="color:var(--navy);">reset to built-in sample</a>';
+      ' · <a href="#" id="resetSourceLink" class="edit-only" style="color:var(--navy);">reset to built-in sample</a>';
     const link = document.getElementById('resetSourceLink');
     if(link){
       link.onclick = async (ev) => {
@@ -1986,6 +2210,7 @@ const addScopeDateLabel = document.getElementById('addScopeDateLabel');
 const addScopeWeekdayLabel = document.getElementById('addScopeWeekdayLabel');
 
 function openAdd(time, room, dayKey){
+  if(!requireSignIn()) return;
   pendingAdd = { time, room, dayKey };
   addMeta.innerHTML = '<b>'+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</b> · Room '+room+' · '+time;
   addScopeDateLabel.textContent = '('+formatDisplayDate(currentDateStr)+')';
@@ -2026,6 +2251,7 @@ const delScopeField = document.getElementById('delScopeField');
 const delScopeWeekdayLabel = document.getElementById('delScopeWeekdayLabel');
 
 function openDelete(time, room, entry, dayKey){
+  if(!requireSignIn()) return;
   pendingDel = { time, room, entry, dayKey };
   const desc = entry.type === 'label' ? labelText(entry.label) :
     [entry.section, entry.course, entry.teacher].filter(Boolean).join(' · ');
@@ -2083,6 +2309,7 @@ const editScopeWeekdayLabel = document.getElementById('editScopeWeekdayLabel');
 let pendingEdit = null;
 
 function openEdit(time, room, entry, dayKey){
+  if(!requireSignIn()) return;
   pendingEdit = { time, room, entry, dayKey };
   editMeta.innerHTML = '<b>'+DAY_NAME[dayKey]+', '+formatDisplayDate(currentDateStr)+'</b> · Room '+room+' · '+time;
   edSection.value = entry.section || '';
@@ -2692,7 +2919,7 @@ async function loadImportedScheduleIfAny(){
 
 (async function init(){
   apiOnline = await probeApi();
-  updateDbStatus();
+  await loadAuthUser();          // also calls updateDbStatus()
   await seedDateOverridesIfNeeded();
   await loadSemesterInfo();
   await loadImportedScheduleIfAny();
