@@ -55,7 +55,9 @@ plus `Secure` when the request arrived over https.
   error line); change password (current, new); manage editors (list with
   remove buttons + add form email/password).
 - `body:not(.can-edit) .edit-only { display:none }`. `edit-only` goes on
-  Import, Generate, Clear, Update and the semester bar.
+  Import, Generate, Clear, the "reset to built-in sample" link and the
+  semester bar. (Save/Update/Link only download an HTML copy — no DB write —
+  so they stay visible.)
 - Grid cell click while signed out opens the sign-in modal instead of the
   add/delete dialog.
 - `apiWrite`: on 401, open the sign-in modal and return the response (the
